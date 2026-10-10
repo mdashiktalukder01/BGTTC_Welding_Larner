@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weld Path – Welding Learner</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Hind+Siliguri:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --steel:#E3E6E8; --panel:#F4F5F6; --ink:#16232D; --muted:#5B6B77; --line:#C5CBD0;
+  --arc:#2D6BFF; --flame:#E4570F; --straw:#D9A93B; --good:#1F8A4C; --bad:#C23030; --lock:#9AA5AD;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--steel:#161D23;--panel:#1F2830;--ink:#E8ECEF;--muted:#9BA9B4;--line:#33414B;--lock:#55646F}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--steel);color:var(--ink);font-family:'Barlow','Hind Siliguri',system-ui,sans-serif;font-size:16px;line-height:1.5;min-height:100vh}
+h1,h2,h3{font-family:'Barlow Condensed','Hind Siliguri',sans-serif;font-weight:700;margin:0;line-height:1.1}
+h1{font-size:2.4rem}h2{font-size:1.7rem}h3{font-size:1.25rem}
+button{font:inherit;cursor:pointer;border:0;color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--arc);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;background:var(--panel);border-bottom:3px solid var(--ink);flex-wrap:wrap}
+.brand{font-family:'Barlow Condensed';font-weight:700;font-size:1.4rem;display:flex;align-items:center;gap:8px;cursor:pointer}
+.spark{width:14px;height:14px;background:var(--flame);transform:rotate(45deg);display:inline-block}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+.ghost{background:transparent;border:2px solid var(--ink);padding:6px 12px;border-radius:6px;font-weight:600}
+.btn{background:var(--flame);color:#fff;padding:13px 18px;border-radius:8px;font-weight:600;font-size:1.02rem;width:100%}
+.btn.alt{background:var(--ink);color:var(--steel)}
+.btn.sm{width:auto;padding:8px 14px;font-size:.92rem}
+.btn.bad{background:var(--bad)}
+.btn:disabled{background:var(--lock);cursor:not-allowed}
+.card{background:var(--panel);border:2px solid var(--ink);border-radius:10px;padding:18px;margin-bottom:12px}
+.muted{color:var(--muted)}
+.pill{display:inline-block;background:var(--ink);color:var(--steel);border-radius:20px;padding:2px 10px;font-size:.8rem;font-weight:600}
+.login{display:grid;grid-template-columns:1fr;gap:20px}
+@media(min-width:760px){.login{grid-template-columns:1.1fr 1fr}}
+.hero{background:var(--ink);color:#EDEFF1;border-radius:10px;padding:28px;position:relative;overflow:hidden;min-height:240px;display:flex;flex-direction:column;justify-content:flex-end}
+.temper{position:absolute;left:0;right:0;top:0;height:12px;background:linear-gradient(90deg,#E8D9A0,#D9A93B,#C8742B,#8A4A9E,#3C57C8,#2D6BFF)}
+.hero p{margin:10px 0 0;color:#B9C3CA;max-width:34ch}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-weight:600;margin-bottom:4px}
+input,textarea,select{width:100%;padding:11px;border:2px solid var(--ink);border-radius:8px;background:var(--steel);color:var(--ink);font:inherit}
+.err{color:var(--bad);min-height:1.2em;margin:0 0 10px;font-size:.92rem}
+.link{background:none;color:var(--arc);text-decoration:underline;padding:6px 0;font-weight:600}
+.dhero{background:var(--ink);color:#EDEFF1;border-radius:12px;padding:22px 18px 16px;position:relative;overflow:hidden;margin-bottom:14px}
+.dtop{display:flex;align-items:center;gap:14px;margin-top:4px}
+.avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#E8D9A0,#D9A93B 50%,#C8742B);color:#16232D;display:grid;place-items:center;font-family:'Barlow Condensed';font-weight:700;font-size:1.5rem;flex:none;border:3px solid #EDEFF1}
+.dtop h2{color:#fff}
+.rank{display:inline-block;margin-top:4px;background:rgba(255,255,255,.14);padding:2px 10px;border-radius:20px;font-size:.85rem;font-weight:600}
+.xpbar{height:10px;background:rgba(255,255,255,.18);border-radius:5px;margin:14px 0 6px;overflow:hidden}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,#E8D9A0,#D9A93B,#C8742B,#8A4A9E,#3C57C8,#2D6BFF)}
+.xpmeta{display:flex;justify-content:space-between;font-size:.85rem;color:#B9C3CA}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+@media(min-width:700px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{background:var(--panel);border:2px solid var(--ink);border-radius:10px;padding:12px 14px}
+.stat b{display:block;font-family:'Barlow Condensed';font-size:1.8rem;line-height:1.1}
+.stat span{font-size:.85rem;color:var(--muted)}
+.banner{background:linear-gradient(135deg,var(--flame),#C8742B);color:#fff;border-radius:10px;padding:16px;border:2px solid var(--ink);margin-bottom:14px}
+.banner p{margin:4px 0 12px}
+.banner .btn{background:#fff;color:var(--ink)}
+.sec{margin:20px 0 10px;display:flex;justify-content:space-between;align-items:baseline}
+.path{position:relative;padding-left:46px}
+.path:before{content:"";position:absolute;left:19px;top:18px;bottom:18px;width:8px;border-radius:4px;background:repeating-linear-gradient(180deg,var(--ink) 0 10px,var(--line) 10px 16px)}
+.lvl{position:relative;display:block;width:100%;text-align:left;background:var(--panel);border:2px solid var(--ink);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.lvl .node{position:absolute;left:-46px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:var(--flame);color:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-family:'Barlow Condensed';font-weight:700;font-size:1.2rem}
+.lvl.locked{background:transparent;border-style:dashed;border-color:var(--lock);color:var(--lock)}
+.lvl.locked .node{background:var(--steel);border-color:var(--lock);color:var(--lock)}
+.lvl .t{font-family:'Barlow Condensed';font-weight:700;font-size:1.35rem}
+.chips{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.chip{font-size:.8rem;font-weight:600;padding:2px 8px;border-radius:12px;background:var(--steel);border:1px solid var(--line)}
+.chip.ok{background:var(--good);color:#fff;border-color:var(--good)}
+.back{background:none;font-weight:600;padding:6px 0;margin-bottom:8px;color:var(--muted)}
+.hub{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(min-width:700px){.hub{grid-template-columns:repeat(3,1fr)}}
+.tile{background:var(--panel);border:2px solid var(--ink);border-radius:10px;padding:16px 14px;text-align:left;min-height:130px;display:flex;flex-direction:column;justify-content:space-between}
+.tile:hover{background:var(--ink);color:var(--steel)}
+.tile .ic{font-size:1.8rem}
+.tile .t{font-family:'Barlow Condensed';font-weight:700;font-size:1.45rem}
+.tile .s{font-size:.85rem;opacity:.75}
+.qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-weight:600;gap:8px}
+.timer{font-family:'Barlow Condensed';font-size:1.6rem;background:var(--ink);color:var(--steel);padding:2px 12px;border-radius:6px}
+.timer.low{background:var(--bad);color:#fff}
+.qtext{font-size:1.18rem;font-weight:600;margin:6px 0 16px;white-space:pre-wrap}
+.opt{display:block;width:100%;text-align:left;background:var(--steel);border:2px solid var(--ink);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-weight:500}
+.opt:hover:not(:disabled){border-color:var(--arc)}
+.opt.ok{background:var(--good);color:#fff;border-color:var(--good)}
+.opt.no{background:var(--bad);color:#fff;border-color:var(--bad)}
+.opt.sel{border-color:var(--arc);box-shadow:inset 0 0 0 2px var(--arc)}
+.note{background:var(--steel);border-left:6px solid var(--straw);padding:10px 12px;border-radius:4px;margin:10px 0 14px;white-space:pre-wrap}
+.toolimg{background:#fff;border:2px solid var(--ink);border-radius:10px;display:grid;place-items:center;padding:10px;margin-bottom:14px;min-height:140px}
+.toolimg img{max-width:100%;max-height:260px;object-fit:contain}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{flex:1}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{padding:8px 14px;border:2px solid var(--ink);border-radius:20px;background:transparent;font-weight:600}
+.tabs button.on{background:var(--ink);color:var(--steel)}
+.cqi{background:var(--panel);border:2px solid var(--ink);border-radius:8px;margin-bottom:8px;padding:10px 12px}
+.cqi summary{cursor:pointer;font-weight:600}
+.cqi[open]{border-color:var(--arc)}
+.cqi .note{margin:10px 0 0}
+.lb{width:100%;border-collapse:collapse}
+.lb td,.lb th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
+.lb tr.me{background:rgba(228,87,15,.14);font-weight:700}
+.lb .pos{font-family:'Barlow Condensed';font-size:1.3rem;width:56px}
+.lb .pt{text-align:right;font-family:'Barlow Condensed';font-size:1.3rem}
+.scroll{overflow-x:auto;border:2px solid var(--ink);border-radius:10px;background:var(--panel)}
+.scroll table{min-width:720px;width:100%;border-collapse:collapse;font-size:.92rem}
+.scroll th,.scroll td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.big{font-family:'Barlow Condensed';font-size:4.5rem;font-weight:700;line-height:1}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--steel);padding:10px 16px;border-radius:8px;z-index:9;max-width:90%;text-align:center}
+.stg{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0 14px}
+@media(min-width:700px){.stg{grid-template-columns:repeat(10,1fr)}}
+.sg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:62px;border:2px solid var(--ink);border-radius:10px;background:var(--panel);padding:4px;line-height:1.15}
+.sg b{font-family:'Barlow Condensed';font-size:1.3rem}
+.sg small{font-size:.72rem;font-weight:600}
+.sg.passed{background:var(--good);color:#fff;border-color:var(--good)}
+.sg.open{background:var(--flame);color:#fff}
+.sg.locked{background:transparent;border-style:dashed;border-color:var(--lock);color:var(--lock)}
+.sg.empty{background:transparent;border-style:dotted;border-color:var(--line);color:var(--line)}
+button.sg{cursor:pointer}
+.grid2{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:620px){.grid2{grid-template-columns:1fr 1fr}}
+.item{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.item .tx{flex:1;min-width:0;overflow-wrap:anywhere}
+.thumb{width:56px;height:56px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:6px;flex:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ============ CONFIG ============ */
+const SB_URL='https://vqadcaxoiwkvqolmtpwr.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxYWRjYXhvaXdrdnFvbG10cHdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MTY0NDAsImV4cCI6MjEwNzE5MjQ0MH0.lDCDmQczjFxOAcrYArFrrnizjrS4yHERObP77eV2Tdc';
+if(!window.supabase){document.getElementById('app').innerHTML='<div style="max-width:560px;margin:40px auto;padding:20px;font-family:sans-serif"><h2>Cannot load the app library</h2><p>The page could not download its Supabase library (jsDelivr). Check your internet connection and open this file in a normal browser such as Chrome or Safari. It will not work inside a preview window that blocks internet access.</p></div>';throw new Error('supabase-js failed to load')}
+const sb=window.supabase.createClient(SB_URL,SB_KEY);
+
+/* ============ HELPERS ============ */
+const $=s=>document.querySelector(s);
+const app=$('#app');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let ME=null, LEVELS=[], ctx={level:1}, timerId=null;
+const LEVEL_ICON=['🧯','🔥','🛠️','🏅'];
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3200)}
+function errMsg(e){const m=(e&&e.message)?e.message:String(e);
+  if(/failed to fetch|networkerror|load failed|network request failed/i.test(m))return 'Cannot reach the server. Check your internet, and open this page in a normal browser (Chrome/Safari) or host it online.';
+  if(/rate limit/i.test(m))return 'Too many emails sent. Wait a few minutes, or turn off "Confirm email" in Supabase.';
+  if(/invalid login/i.test(m))return 'Wrong email or password. If you just signed up, confirm the email first.';
+  if(/not confirmed/i.test(m))return 'Email not confirmed yet. Open the confirmation email, or ask the admin to turn off "Confirm email".';
+  if(/already registered/i.test(m))return 'This email already has an account. Sign in instead.';
+  return m}
+async function rpc(name,args){const {data,error}=await sb.rpc(name,args||{});if(error)throw error;return data}
+function imgUrl(p){return sb.storage.from('tool-images').getPublicUrl(p).data.publicUrl}
+function levelId(n){const l=LEVELS.find(x=>x.level_number===n);return l?l.id:null}
+function lvlOptions(sel){return LEVELS.map(l=>`<option value="${l.level_number}" ${l.level_number===sel?'selected':''}>Level ${l.level_number} · ${esc(l.title)}</option>`).join('')}
+function shell(inner,back){
+  clearInterval(timerId);
+  const nav=ME?`<div class="nav"><button class="ghost" id="nlb">🏆 Leaderboard</button>${ME.role==='admin'?'<button class="ghost" id="nad">⚙️ Admin</button>':''}<button class="ghost" id="nlo">Log out</button></div>`:'';
+  app.innerHTML=`<div class="bar"><div class="brand" id="nbr"><span class="spark"></span>Weld Path</div>${nav}</div><main class="wrap">${back?`<button class="back" id="bk">← ${esc(back.label)}</button>`:''}${inner}</main>`;
+  if(back)$('#bk').onclick=back.fn;
+  if(ME){
+    $('#nbr').onclick=dash;$('#nlb').onclick=leaderboard;$('#nlo').onclick=async()=>{await sb.auth.signOut();ME=null;authScreen()};
+    if($('#nad'))$('#nad').onclick=()=>admin('students');
+  }
+  window.scrollTo(0,0);
+}
+function loading(t){shell(`<div class="card"><b>${t||'Loading…'}</b></div>`)}
+async function guard(fn,backFn){try{return await fn()}catch(e){console.error(e);toast(errMsg(e));if(backFn)backFn()}}
+
+/* ============ AUTH ============ */
+function authScreen(mode='login'){
+  const su=mode==='signup';
+  shell(`<div class="login">
+   <section class="hero"><div class="temper"></div><h1>Learn welding,<br>one bead at a time.</h1><p>MCQ, written questions and tool recognition. Earn points, climb the leaderboard.</p></section>
+   <section class="card"><h2>${su?'Create account':'Sign in'}</h2><p class="muted" style="margin:6px 0 14px">${su?'নাম, মোবাইল নাম্বার ও ইমেইল দিয়ে অ্যাকাউন্ট খুলুন':'ইমেইল ও পাসওয়ার্ড দিয়ে প্রবেশ করুন'}</p>
+   ${su?`<label class="field"><span>Full name</span><input id="nm" autocomplete="name"></label><label class="field"><span>Mobile number</span><input id="ph" type="tel" inputmode="numeric" autocomplete="tel" placeholder="01XXXXXXXXX"></label>`:''}
+   <label class="field"><span>Email</span><input id="em" type="email" autocomplete="email"></label>
+   <label class="field"><span>Password</span><input id="pw" type="password" autocomplete="${su?'new-password':'current-password'}" placeholder="${su?'At least 6 characters':''}"></label>
+   <div class="err" id="er"></div>
+   <button class="btn" id="go">${su?'Create account':'Sign in'}</button>
+   <button class="link" id="sw">${su?'Already have an account? Sign in':'New here? Create an account'}</button></section></div>`);
+  $('#sw').onclick=()=>authScreen(su?'login':'signup');
+  const cs=document.createElement('p');cs.className='muted';cs.style.cssText='margin:10px 0 0;font-size:.88rem';cs.textContent='Checking connection…';$('#sw').after(cs);
+  fetch(SB_URL+'/auth/v1/health',{headers:{apikey:SB_KEY}}).then(r=>{cs.textContent=r.ok?'✓ Connected to the server':'⚠ Server answered with status '+r.status}).catch(()=>{cs.style.color='var(--bad)';cs.textContent='✗ Cannot reach the server. Open this page in Chrome/Safari (not inside a preview) with internet on, or host it online.'});
+  $('#go').onclick=async()=>{
+    const em=$('#em').value.trim(),pw=$('#pw').value,er=$('#er');er.textContent='';
+    if(!/^\S+@\S+\.\S+$/.test(em))return er.textContent='Enter a valid email address.';
+    if(pw.length<6)return er.textContent='Password must be at least 6 characters.';
+    $('#go').disabled=true;
+    try{
+      if(su){
+        const nm=$('#nm').value.trim(),ph=$('#ph').value.trim();
+        if(nm.length<2){er.textContent='Enter your full name.';$('#go').disabled=false;return}
+        if(!/^\+?\d{10,14}$/.test(ph)){er.textContent='Enter a valid mobile number (10–14 digits).';$('#go').disabled=false;return}
+        const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{full_name:nm,phone:ph}}});
+        if(error)throw error;
+        if(!data.session){authScreen('login');toast('Account created. Check your email to confirm, then sign in.');return}
+      }else{
+        const {error}=await sb.auth.signInWithPassword({email:em,password:pw});if(error)throw error;
+      }
+      await boot();
+    }catch(e){er.textContent=errMsg(e);$('#go').disabled=false}
+  };
+}
+async function loadMe(){
+  const {data:{user}}=await sb.auth.getUser();if(!user)return null;
+  const {data,error}=await sb.from('profiles').select('id,full_name,email,phone,role').eq('id',user.id).single();
+  if(error)throw error;return data;
+}
+async function boot(){
+  loading();
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){ME=null;return authScreen()}
+    ME=await loadMe();
+    const {data:lv}=await sb.from('levels').select('id,level_number,title,description,pass_mark,exam_size').order('level_number');
+    LEVELS=lv||[];
+    dash();
+  }catch(e){console.error(e);ME=null;authScreen();toast(errMsg(e))}
+}
+
+/* ============ DASHBOARD ============ */
+const RANKS=[[0,'Apprentice'],[50,'Welder'],[200,'Fabricator'],[500,'Master welder']];
+async function dash(){
+  loading();
+  await guard(async()=>{
+    const lv=await rpc('get_dashboard');
+    const cur=Math.max(1,...lv.filter(l=>l.is_unlocked).map(l=>l.level_number));
+    ctx.level=cur;
+    const pr=await rpc('my_progress',{p_level:cur});
+    const studied=pr.studied.mcq+pr.studied.cq+pr.studied.tool;
+    let ri=0;RANKS.forEach((r,i)=>{if(pr.points>=r[0])ri=i});
+    const nx=RANKS[ri+1];const pct=nx?Math.round((pr.points-RANKS[ri][0])*100/(nx[0]-RANKS[ri][0])):100;
+    const ini=(ME.full_name||ME.email||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const levels=lv.map(l=>{
+      const open=l.is_unlocked,isCur=l.level_number===cur;
+      const done=l.mcq_passed&&l.cq_passed;
+      return `<button class="lvl ${open?'':'locked'}" data-n="${l.level_number}"><span class="node">${open?l.level_number:'🔒'}</span>
+        <div class="t">${LEVEL_ICON[l.level_number-1]||''} Level ${l.level_number} · ${esc(l.title.replace(/^Level \d+:\s*/,''))}</div>
+        <div class="muted" style="font-size:.92rem">${open?(done?'Cleared. Open to review.':(isCur?'Current level. Pass MCQ and CQ exams with 80+ to unlock the next.':'Open')):'Locked. Clear the previous level first.'}</div>
+        ${open?`<div class="chips"><span class="chip ${l.mcq_passed?'ok':''}">MCQ best ${l.mcq_best_score==null?'–':Math.round(l.mcq_best_score)+'%'}</span><span class="chip ${l.cq_passed?'ok':''}">CQ best ${l.cq_best_score==null?'–':Math.round(l.cq_best_score)+'%'}</span></div>`:''}</button>`}).join('');
+    shell(`<section class="dhero"><div class="temper"></div>
+      <div class="dtop"><div class="avatar">${esc(ini)}</div><div style="flex:1;min-width:0"><h2>Hello, ${esc((ME.full_name||'learner').split(' ')[0])}</h2><span class="rank">${RANKS[ri][1]}</span></div></div>
+      <div class="xpbar"><i style="width:${pct}%"></i></div>
+      <div class="xpmeta"><span>${pr.points} points</span><span>${nx?(nx[0]-pr.points)+' to '+nx[1]:'Top rank reached'}</span></div></section>
+     <div class="stats">
+      <div class="stat"><b>${pr.points}</b><span>Points</span></div>
+      <div class="stat"><b>#${pr.rank}</b><span>Leaderboard rank</span></div>
+      <div class="stat"><b>${studied}</b><span>Studied in Level ${cur}</span></div>
+      <div class="stat"><b>Level ${cur}</b><span>Current level</span></div></div>
+     ${pr.practice_due?`<div class="banner"><h3>Practice exam ready</h3><p>You finished another 50 MCQs. This exam gives no points.</p><button class="btn" id="pe">Start practice exam</button></div>`:''}
+     <div class="row" style="margin-bottom:6px"><button class="btn alt" id="lb">🏆 View leaderboard</button><button class="btn" id="cn">Continue Level ${cur}</button></div>
+     <div class="sec"><h2>Your path</h2></div><div class="path">${levels}</div>`);
+    $('#cn').onclick=()=>hub(cur);$('#lb').onclick=leaderboard;
+    if($('#pe'))$('#pe').onclick=()=>startExam('mcq',true);
+    document.querySelectorAll('.lvl').forEach(b=>b.onclick=()=>{const n=+b.dataset.n,l=lv.find(x=>x.level_number===n);if(!l.is_unlocked)return toast('Locked. Clear Level '+(n-1)+' first.');hub(n)});
+  },authScreen);
+}
+
+/* ============ LEADERBOARD ============ */
+async function leaderboard(){
+  loading();
+  await guard(async()=>{
+    const rows=await rpc('leaderboard_top',{p_limit:20});
+    const pr=await rpc('my_progress',{p_level:ctx.level||1});
+    const inTop=rows.some(r=>r.is_me);
+    const medal=n=>n===1?'🥇':n===2?'🥈':n===3?'🥉':'#'+n;
+    shell(`<h2>Leaderboard</h2><p class="muted" style="margin:4px 0 14px">Top 20 students by points. Points come only from main exams.</p>
+      <div class="card" style="padding:6px 12px"><table class="lb"><tbody>
+      ${rows.length?rows.map(r=>`<tr class="${r.is_me?'me':''}"><td class="pos">${medal(Number(r.rnk))}</td><td>${esc(r.full_name)}${r.is_me?' (you)':''}</td><td class="pt">${r.points}</td></tr>`).join(''):'<tr><td>No students yet.</td></tr>'}
+      </tbody></table></div>
+      ${!inTop?`<div class="card"><b>Your position: #${pr.rank}</b> · ${pr.points} points</div>`:''}`,{label:'Dashboard',fn:dash});
+  },dash);
+}
+
+/* ============ LEVEL HUB ============ */
+async function hub(n){
+  ctx.level=n;loading();
+  await guard(async()=>{
+    const pr=await rpc('my_progress',{p_level:n});
+    const t=(id,ic,tt,ss)=>`<button class="tile" id="${id}"><span class="ic">${ic}</span><span><div class="t">${tt}</div><div class="s">${ss}</div></span></button>`;
+    const l=LEVELS.find(x=>x.level_number===n);
+    shell(`<h2>Level ${n} · ${esc((l?l.title:'').replace(/^Level \d+:\s*/,''))}</h2><p class="muted" style="margin:4px 0 14px">Choose what to do next.</p>
+     ${pr.practice_due?`<div class="banner"><h3>Practice exam ready</h3><p>You finished 50 more MCQs. Take the practice exam. No points.</p><button class="btn" id="pe">Start practice exam</button></div>`:''}
+     <div class="hub">
+      ${t('hm','📝','MCQ','100 stages · 10 MCQs each')}
+      ${t('hc','✍️','CQ',`${pr.studied.cq} / ${pr.available.cq} studied`)}
+      ${t('ht','🔧','Tools',`${pr.studied.tool} / ${pr.available.tool} studied`)}
+      ${t('ha','📖','All CQ','Browse every question and answer')}
+      ${t('he','⏱️','Exam','Main exam · earns points')}
+      ${t('hh','📚','History','Read what you studied again')}
+     </div>`,{label:'All levels',fn:dash});
+    $('#hm').onclick=mcqStages;$('#hc').onclick=()=>study('cq');$('#ht').onclick=()=>study('tool');
+    $('#ha').onclick=()=>allCQ(0,'');$('#he').onclick=examMenu;$('#hh').onclick=()=>historyView('mcq',0);
+    if($('#pe'))$('#pe').onclick=()=>startExam('mcq',true);
+  },dash);
+}
+const LABEL={mcq:'MCQ',cq:'CQ',tool:'Tools'};
+
+/* ============ STUDY (one at a time; answer revealed after you answer) ============ */
+async function study(kind){
+  loading();
+  await guard(async()=>{
+    const d=await rpc('study_next',{p_kind:kind,p_level:ctx.level});
+    const back={label:'Level '+ctx.level,fn:()=>hub(ctx.level)};
+    if(kind==='mcq'&&d.studied>0&&d.studied%50===0&&ctx.promptedAt!==d.studied){
+      ctx.promptedAt=d.studied;
+      shell(`<div class="card"><h2>50 MCQs done</h2><p class="muted">Take the practice exam on the last 50 you studied. It gives no points.</p><div class="row"><button class="btn alt" id="kp">Keep studying</button><button class="btn" id="sp">Start practice exam</button></div></div>`,back);
+      $('#kp').onclick=()=>study('mcq');$('#sp').onclick=()=>startExam('mcq',true);return;
+    }
+    if(!d.item){
+      shell(`<div class="card"><h2>All ${LABEL[kind]} studied</h2><p class="muted">${d.studied?'You have studied every '+LABEL[kind]+' item in this level.':'No '+LABEL[kind]+' items have been added to this level yet.'}</p><div class="row"><button class="btn alt" id="h">Read again</button><button class="btn" id="e">Take exam</button></div></div>`,back);
+      $('#h').onclick=()=>historyView(kind,0);$('#e').onclick=examMenu;return;
+    }
+    const it=d.item,head=`<div class="qhead"><span>${LABEL[kind]} · ${d.studied+1} of ${d.studied+d.remaining}</span><span class="pill">Level ${ctx.level}</span></div>`;
+    if(kind==='cq'){
+      shell(`${head}<div class="card"><div class="qtext">${esc(it.question)}</div><div id="ans"></div><button class="btn alt" id="rv" style="margin-bottom:10px">Show model answer</button><button class="btn" id="nx" disabled>Next</button></div>`,back);
+      $('#rv').onclick=()=>guard(async()=>{const r=await rpc('study_answer',{p_kind:'cq',p_id:it.id});$('#ans').innerHTML=`<div class="note">${esc(r.answer)}</div>`;$('#rv').remove();$('#nx').disabled=false});
+    }else{
+      const L='ABCD';
+      const opts=it.options.map((t,k)=>`<button class="opt" data-k="${kind==='mcq'?L[k]:esc(t)}">${kind==='mcq'?L[k]+'. ':''}${esc(t)}</button>`).join('');
+      shell(`${head}<div class="card">${kind==='tool'?`<div class="toolimg"><img src="${esc(imgUrl(it.image_path))}" alt="Tool to identify"></div><div class="qtext">What is the correct name of this tool?</div>`:`<div class="qtext">${esc(it.question)}</div>`}${opts}<div id="ex"></div><button class="btn" id="nx" disabled>Next</button></div>`,back);
+      document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>guard(async()=>{
+        document.querySelectorAll('.opt').forEach(x=>x.disabled=true);
+        const choice=b.dataset.k;
+        const r=await rpc('study_answer',{p_kind:kind,p_id:it.id,p_choice:choice});
+        document.querySelectorAll('.opt').forEach(x=>{
+          const isCorrect=kind==='mcq'?x.dataset.k===r.correct_option:x.dataset.k===r.correct_answer;
+          if(isCorrect)x.classList.add('ok');else if(x===b)x.classList.add('no');
+        });
+        $('#ex').innerHTML=`<div class="note">${r.correct?'Correct. ':'Not quite. '}${kind==='tool'?'This is: '+esc(r.correct_answer)+'.':esc(r.explanation||'')}</div>`;
+        $('#nx').disabled=false;
+      }));
+    }
+    $('#nx').onclick=()=>study(kind);
+  },()=>hub(ctx.level));
+}
+
+/* ============ MCQ STAGES (100 stages, 10 fixed MCQs each) ============ */
+async function mcqStages(){
+  loading();
+  await guard(async()=>{
+    const d=await rpc('stage_map',{p_level:ctx.level});
+    const st=d.stages;ctx.stageMap=st;
+    const passed=st.filter(x=>x.status==='passed').length,avail=st.filter(x=>x.count>0).length;
+    const sub=x=>x.status==='passed'?'✓ '+x.best+'/'+x.count:x.status==='locked'?'🔒':x.status==='empty'?'soon':'open';
+    shell(`<h2>MCQ stages</h2><p class="muted" style="margin:4px 0 12px">Every stage has 10 MCQs that never change. Score 8 of 10 or more to open the next stage. You can read cleared stages again any time.</p>
+      <div class="stats"><div class="stat"><b>${passed}/${avail}</b><span>Stages cleared</span></div><div class="stat"><b>${d.open_stage<=100?d.open_stage:'–'}</b><span>Next stage to play</span></div></div>
+      <div class="stg">${st.map(x=>`<button class="sg ${x.status}" data-s="${x.stage}" aria-label="Stage ${x.stage} ${x.status}"><b>${x.stage}</b><small>${sub(x)}</small></button>`).join('')}</div>`,{label:'Level '+ctx.level,fn:()=>hub(ctx.level)});
+    document.querySelectorAll('.sg[data-s]').forEach(b=>b.onclick=()=>{
+      const x=st.find(y=>y.stage===+b.dataset.s);
+      if(x.status==='locked')return toast('Locked. Clear Stage '+(x.stage-1)+' first.');
+      if(x.status==='empty')return toast(x.stage>d.open_stage?'Locked.':'No questions in this stage yet.');
+      stageHome(x);
+    });
+  },()=>hub(ctx.level));
+}
+function stageHome(x){
+  const need=Math.ceil(x.count*0.8);
+  shell(`<div class="card"><h2>Stage ${x.stage}</h2><p class="muted" style="margin:6px 0 14px">${x.count} MCQs · pass with ${need} correct${x.attempts?` · best ${x.best}/${x.count} · ${x.attempts} attempt${x.attempts>1?'s':''}`:''}</p>
+    <button class="btn" id="go" style="margin-bottom:10px">${x.status==='passed'?'Play again':'Start stage'}</button>
+    ${x.attempts?'<button class="btn alt" id="rd">Read this stage again</button>':''}</div>`,{label:'All stages',fn:mcqStages});
+  $('#go').onclick=()=>runStage(x.stage);
+  if($('#rd'))$('#rd').onclick=()=>stageReview(x.stage);
+}
+async function runStage(stage){
+  loading('Opening stage…');
+  await guard(async()=>{
+    const d=await rpc('stage_start',{p_level:ctx.level,p_stage:stage});
+    ctx.stg={id:d.attempt_id,stage:d.stage,qs:d.questions,need:d.need,i:0,correct:0};
+    stageQ();
+  },mcqStages);
+}
+function stageQ(){
+  const S=ctx.stg,q=S.qs[S.i],L='ABCD',last=S.i+1===S.qs.length;
+  shell(`<div class="qhead"><span>Stage ${S.stage} · Question ${S.i+1} of ${S.qs.length}</span><span class="pill">${S.correct} correct</span></div>
+    <div class="card"><div class="qtext">${esc(q.question)}</div>${q.options.map((t,k)=>`<button class="opt" data-k="${L[k]}">${L[k]}. ${esc(t)}</button>`).join('')}<div id="ex"></div><button class="btn" id="nx" disabled>${last?'Finish stage':'Next'}</button></div>`,{label:'Leave stage',fn:mcqStages});
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>guard(async()=>{
+    document.querySelectorAll('.opt').forEach(x=>x.disabled=true);
+    const r=await rpc('stage_answer',{p_attempt:S.id,p_qid:q.id,p_choice:b.dataset.k});
+    if(r.correct)S.correct++;
+    document.querySelectorAll('.opt').forEach(x=>{if(x.dataset.k===r.correct_option)x.classList.add('ok');else if(x===b)x.classList.add('no')});
+    $('#ex').innerHTML=`<div class="note">${r.correct?'Correct. ':'Not quite. '}${esc(r.explanation||'')}</div>`;
+    $('#nx').disabled=false;
+  }));
+  $('#nx').onclick=()=>last?finishStage():(S.i++,stageQ());
+}
+async function finishStage(){
+  const S=ctx.stg;loading('Checking your stage…');
+  await guard(async()=>{
+    const r=await rpc('stage_finish',{p_attempt:S.id});
+    shell(`<div class="card" style="text-align:center"><div class="muted">Stage ${r.stage}</div>
+      <div class="big" style="color:${r.passed?'var(--good)':'var(--bad)'}">${r.correct}/${r.total}</div>
+      <div class="note" style="text-align:left">${r.passed?(r.next_stage?`Stage cleared. Stage ${r.next_stage} is now open.`:'Stage cleared.'):`You need ${r.need} correct to clear this stage. Read it again and retry. The same ${r.total} questions will come.`}</div>
+      <div class="row" style="margin-bottom:10px">${r.passed&&r.next_stage?`<button class="btn" id="n">Play Stage ${r.next_stage}</button>`:`<button class="btn" id="n">Try again</button>`}<button class="btn alt" id="rv">Read stage</button></div>
+      <button class="btn alt" id="m">All stages</button></div>`);
+    $('#n').onclick=()=>runStage(r.passed&&r.next_stage?r.next_stage:r.stage);
+    $('#rv').onclick=()=>stageReview(r.stage);$('#m').onclick=mcqStages;
+  },mcqStages);
+}
+async function stageReview(stage){
+  loading();
+  await guard(async()=>{
+    const d=await rpc('stage_review',{p_level:ctx.level,p_stage:stage});const L='ABCD';
+    shell(`<h2>Stage ${stage}</h2><p class="muted" style="margin:4px 0 12px">The correct answers are marked in green.</p>
+      ${d.questions.map((q,i)=>`<div class="card"><div class="qtext">${i+1}. ${esc(q.question)}</div>${q.options.map((o,k)=>`<div class="opt ${L[k]===q.correct_option?'ok':''}" style="cursor:default">${L[k]}. ${esc(o)}</div>`).join('')}${q.explanation?`<div class="note">${esc(q.explanation)}</div>`:''}</div>`).join('')}
+      <button class="btn" id="pl">Play this stage</button>`,{label:'All stages',fn:mcqStages});
+    $('#pl').onclick=()=>runStage(stage);
+  },mcqStages);
+}
+
+/* ============ HISTORY (read old items again) ============ */
+async function historyView(kind,page){
+  loading();
+  await guard(async()=>{
+    const PS=25;
+    const d=await rpc('study_history',{p_kind:kind,p_level:ctx.level,p_limit:PS,p_offset:page*PS});
+    const pages=Math.max(1,Math.ceil(d.total/PS));
+    const L='ABCD';
+    const row=(x,i)=>{
+      const n=page*PS+i+1;
+      if(kind==='mcq')return `<details class="cqi"><summary><b>${n}.</b> ${esc(x.question)}</summary><div style="margin-top:8px">${x.options.map((o,k)=>`<div style="padding:4px 0;${L[k]===x.correct_option?'color:var(--good);font-weight:700':''}">${L[k]}. ${esc(o)}${L[k]===x.correct_option?' ✓':''}</div>`).join('')}</div>${x.explanation?`<div class="note">${esc(x.explanation)}</div>`:''}</details>`;
+      if(kind==='cq')return `<details class="cqi"><summary><b>${n}.</b> ${esc(x.question)}</summary><div class="note">${esc(x.answer)}</div></details>`;
+      return `<details class="cqi"><summary><b>${n}.</b> ${esc(x.name)}</summary><div class="toolimg" style="margin-top:8px"><img src="${esc(imgUrl(x.image_path))}" alt="${esc(x.name)}"></div></details>`;
+    };
+    shell(`<h2>History</h2><p class="muted" style="margin:4px 0 12px">Everything you studied in Level ${ctx.level}. Exams use only these questions.</p>
+      <div class="tabs">${['mcq','cq','tool'].map(k=>`<button data-k="${k}" class="${k===kind?'on':''}">${LABEL[k]}</button>`).join('')}</div>
+      ${d.total?`<button class="btn alt" id="rr" style="margin-bottom:12px">Read all again, one by one</button>`:''}
+      ${d.items.length?d.items.map(row).join(''):`<div class="card"><b>Nothing here yet.</b><p class="muted" style="margin:4px 0 0">Study some ${LABEL[kind]} to fill your history.</p></div>`}
+      ${pages>1?`<div class="row" style="margin-top:10px"><button class="btn alt" id="pv" ${page===0?'disabled':''}>Previous</button><div style="text-align:center">Page ${page+1} of ${pages}</div><button class="btn alt" id="nxp" ${page>=pages-1?'disabled':''}>Next</button></div>`:''}`,{label:'Level '+ctx.level,fn:()=>hub(ctx.level)});
+    document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>historyView(b.dataset.k,0));
+    if($('#rr'))$('#rr').onclick=()=>reread(kind,0,d.total);
+    if($('#pv'))$('#pv').onclick=()=>historyView(kind,page-1);
+    if($('#nxp'))$('#nxp').onclick=()=>historyView(kind,page+1);
+  },()=>hub(ctx.level));
+}
+async function reread(kind,idx,total){
+  loading();
+  await guard(async()=>{
+    const d=await rpc('study_history',{p_kind:kind,p_level:ctx.level,p_limit:1,p_offset:idx});
+    const x=d.items[0];total=d.total;
+    if(!x){return historyView(kind,0)}
+    const L='ABCD';
+    let body;
+    if(kind==='mcq')body=`<div class="qtext">${esc(x.question)}</div>${x.options.map((o,k)=>`<div class="opt" data-l="${L[k]}" style="cursor:default">${L[k]}. ${esc(o)}</div>`).join('')}<div id="ex"></div><button class="btn alt" id="sa" style="margin-bottom:10px">Show answer</button>`;
+    else if(kind==='cq')body=`<div class="qtext">${esc(x.question)}</div><div id="ex"></div><button class="btn alt" id="sa" style="margin-bottom:10px">Show answer</button>`;
+    else body=`<div class="toolimg"><img src="${esc(imgUrl(x.image_path))}" alt="Tool"></div><div class="qtext">What is this tool?</div><div id="ex"></div><button class="btn alt" id="sa" style="margin-bottom:10px">Show answer</button>`;
+    shell(`<div class="qhead"><span>Reading again · ${idx+1} of ${total}</span><span class="pill">${LABEL[kind]}</span></div><div class="card">${body}
+      <div class="row"><button class="btn alt" id="pv" ${idx===0?'disabled':''}>Previous</button><button class="btn" id="nx" ${idx+1>=total?'disabled':''}>Next</button></div></div>`,{label:'History',fn:()=>historyView(kind,0)});
+    $('#sa').onclick=()=>{
+      if(kind==='mcq'){document.querySelectorAll('.opt').forEach(o=>{if(o.dataset.l===x.correct_option)o.classList.add('ok')});$('#ex').innerHTML=x.explanation?`<div class="note">${esc(x.explanation)}</div>`:''}
+      else if(kind==='cq')$('#ex').innerHTML=`<div class="note">${esc(x.answer)}</div>`;
+      else $('#ex').innerHTML=`<div class="note">${esc(x.name)}</div>`;
+      $('#sa').remove();
+    };
+    $('#pv').onclick=()=>reread(kind,idx-1,total);$('#nx').onclick=()=>reread(kind,idx+1,total);
+  },()=>hub(ctx.level));
+}
+
+/* ============ ALL CQ ============ */
+async function allCQ(page,q){
+  loading();
+  await guard(async()=>{
+    const PS=50,lid=levelId(ctx.level);
+    let query=sb.from('study_materials').select('id,question,answer,sort_order',{count:'exact'}).eq('level_id',lid).eq('is_published',true);
+    if(q)query=query.or(`question.ilike.%${q.replace(/[%,()]/g,' ')}%,answer.ilike.%${q.replace(/[%,()]/g,' ')}%`);
+    const {data,count,error}=await query.order('sort_order').order('created_at').range(page*PS,page*PS+PS-1);
+    if(error)throw error;
+    const pages=Math.max(1,Math.ceil((count||0)/PS));
+    shell(`<h2>All CQ</h2><p class="muted" style="margin:4px 0 12px">${count||0} questions. Tap a question to see its answer.</p>
+      <div class="row" style="margin-bottom:12px"><input id="sq" placeholder="Search a word, or type a number to jump" value="${esc(q)}"><button class="btn sm" id="sg" style="flex:none">Go</button></div>
+      ${data.length?data.map((x,i)=>`<details class="cqi"><summary><b>${q?'':(page*PS+i+1)+'.'}</b> ${esc(x.question)}</summary><div class="note">${esc(x.answer)}</div></details>`).join(''):`<div class="card"><b>${q?'No match.':'No questions yet.'}</b><p class="muted" style="margin:4px 0 0">${q?'Try a different word.':'Questions will appear here once the admin uploads them.'}</p></div>`}
+      ${pages>1?`<div class="row" style="margin-top:10px"><button class="btn alt" id="pv" ${page===0?'disabled':''}>Previous</button><div style="text-align:center">Page ${page+1} of ${pages}</div><button class="btn alt" id="nxp" ${page>=pages-1?'disabled':''}>Next</button></div>`:''}`,{label:'Level '+ctx.level,fn:()=>hub(ctx.level)});
+    const go=()=>{const v=$('#sq').value.trim();if(/^\d+$/.test(v))allCQ(Math.floor((+v-1)/PS),'');else allCQ(0,v)};
+    $('#sg').onclick=go;$('#sq').onkeydown=e=>{if(e.key==='Enter')go()};
+    if($('#pv'))$('#pv').onclick=()=>allCQ(page-1,q);if($('#nxp'))$('#nxp').onclick=()=>allCQ(page+1,q);
+  },()=>hub(ctx.level));
+}
+
+/* ============ EXAMS ============ */
+async function examMenu(){
+  loading();
+  await guard(async()=>{
+    const pr=await rpc('my_progress',{p_level:ctx.level});
+    const c=k=>pr.studied[k];
+    shell(`<h2>Main exam</h2><p class="muted" style="margin:4px 0 14px">Up to 50 questions, 30 minutes, taken only from what you studied. Questions and answer positions are re-shuffled every time. Points: 2 per mark.</p>
+     ${pr.practice_due?`<div class="banner"><h3>Practice exam ready</h3><p>Based on the last 50 MCQs you studied. No points.</p><button class="btn" id="pe">Start practice exam</button></div>`:`<p class="muted" style="margin-bottom:12px">Practice exam (no points) unlocks after every 50 MCQs. ${pr.mcq_until_practice} more MCQs to go.</p>`}
+     <div class="grid2">
+      <button class="tile" data-k="mcq"><span class="t">MCQ exam</span><span class="s">${c('mcq')} studied</span></button>
+      <button class="tile" data-k="cq"><span class="t">CQ exam</span><span class="s">${c('cq')} studied</span></button>
+      <button class="tile" data-k="tool"><span class="t">Tools exam</span><span class="s">${c('tool')} studied</span></button></div>`,{label:'Level '+ctx.level,fn:()=>hub(ctx.level)});
+    document.querySelectorAll('.tile[data-k]').forEach(b=>b.onclick=()=>startExam(b.dataset.k,false));
+    if($('#pe'))$('#pe').onclick=()=>startExam('mcq',true);
+  },()=>hub(ctx.level));
+}
+async function startExam(kind,practice){
+  loading('Preparing your exam…');
+  await guard(async()=>{
+    const d=await rpc('exam_start',{p_kind:kind,p_level:ctx.level,p_practice:practice});
+    ctx.exam={run:d.run_id,kind:d.kind,practice:d.practice,qs:d.questions,i:0,answers:{},dur:d.duration_seconds,t0:performance.now(),sel:null,sent:false};
+    runExam();
+  },()=>hub(ctx.level));
+}
+function runExam(){
+  const E=ctx.exam,q=E.qs[E.i],last=E.i+1===E.qs.length;
+  const left=()=>Math.max(0,Math.round(E.dur-(performance.now()-E.t0)/1000));
+  const mm=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  let body;
+  if(E.kind==='cq'){
+    body=`<div class="qtext">${esc(q.question)}</div><textarea id="tx" rows="7" placeholder="Write your answer in full sentences…">${esc(E.answers[q.position]||'')}</textarea><p class="muted" style="margin:6px 0 12px;font-size:.9rem">Marks are given automatically for the key points in your answer. Random or very short text scores 0.</p><button class="btn" id="nx">${last?'Finish exam':'Next'}</button>`;
+  }else{
+    body=`${E.kind==='tool'?`<div class="toolimg"><img src="${esc(imgUrl(q.image_path))}" alt="Tool"></div><div class="qtext">What is the correct name of this tool?</div>`:`<div class="qtext">${esc(q.question)}</div>`}${q.options.map((t,k)=>`<button class="opt" data-k="${k}">${E.kind==='mcq'?'ABCD'[k]+'. ':''}${esc(t)}</button>`).join('')}<button class="btn" id="nx" disabled>${last?'Finish exam':'Next'}</button>`;
+  }
+  shell(`<div class="qhead"><span>${E.practice?'Practice · ':''}Question ${E.i+1} of ${E.qs.length}</span><span class="timer ${left()<300?'low':''}" id="tm" role="timer">${mm(left())}</span></div><div class="card">${body}</div>`);
+  timerId=setInterval(()=>{const l=left(),t=$('#tm');if(t){t.textContent=mm(l);if(l<300)t.classList.add('low')}if(l<=0){clearInterval(timerId);submitExam(true)}},1000);
+  if(E.kind==='cq'){
+    $('#nx').onclick=()=>{E.answers[q.position]=$('#tx').value;E.i++;last?submitExam(false):runExam()};
+  }else{
+    document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{E.sel=+b.dataset.k;document.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');$('#nx').disabled=false});
+    $('#nx').onclick=()=>{E.answers[q.position]=E.sel;E.sel=null;E.i++;last?submitExam(false):runExam()};
+  }
+}
+async function submitExam(timeUp){
+  const E=ctx.exam;if(E.sent)return;E.sent=true;clearInterval(timerId);
+  const cq=document.querySelector('#tx');if(cq&&E.qs[E.i])E.answers[E.qs[E.i].position]=cq.value;
+  loading(timeUp?'Time is up. Submitting…':'Checking your answers…');
+  try{
+    const r=await rpc('exam_submit',{p_run_id:E.run,p_answers:E.answers});
+    const pass=r.score_pct>=80;
+    shell(`<div class="card" style="text-align:center"><div class="muted">${E.practice?'Practice':'Main'} ${LABEL[E.kind]} exam${timeUp?' · time up':''}</div>
+      <div class="big" style="color:${pass?'var(--good)':'var(--bad)'}">${r.score_pct}%</div>
+      <p>${Math.round(r.score*100)/100} of ${r.total} marks</p>
+      <div class="note" style="text-align:left">${E.practice?'This was a practice exam. No points were added.':`+${r.points_awarded} points added to your total. ${pass?(r.next_level_open?'Next level is open.':'Passed. Clear the other exam type with 80+ to open the next level.'):'You need 80+ to count toward the next level.'}`}</div>
+      <div class="row"><button class="btn alt" id="b">Level ${ctx.level}</button><button class="btn" id="d">Dashboard</button></div></div>
+      <div class="sec"><h3>Review</h3></div>
+      ${r.review.map(x=>`<details class="cqi"><summary><b>${x.position}.</b> ${x.image_path?'Tool picture':esc(x.question)} <span class="pill" style="background:${x.marks>=1?'var(--good)':x.marks>0?'var(--straw)':'var(--bad)'};color:#fff">${x.marks}/1</span></summary>${x.image_path?`<div class="toolimg" style="margin-top:8px"><img src="${esc(imgUrl(x.image_path))}" alt="Tool"></div>`:''}<div class="note">Correct answer: ${esc(x.correct_answer)}${x.explanation?'\n\n'+esc(x.explanation):''}</div></details>`).join('')}`);
+    $('#b').onclick=()=>hub(ctx.level);$('#d').onclick=dash;
+  }catch(e){console.error(e);toast(errMsg(e));hub(ctx.level)}
+}
+
+/* ============ ADMIN PANEL ============ */
+function parseCSV(text,d){
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}
+    else{if(ch==='"')q=true;else if(ch===d){row.push(cur);cur=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur=''}else cur+=ch}}
+  if(cur!==''||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+function csvObjects(text){
+  text=text.replace(/^\uFEFF/,'');const first=text.split(/\r?\n/)[0]||'';
+  const d=first.includes('\t')&&!first.includes(',')?'\t':',';
+  const r=parseCSV(text,d);if(!r.length)return[];
+  const h=r.shift().map(x=>x.trim().toLowerCase());
+  return r.map(c=>Object.fromEntries(h.map((k,i)=>[k,(c[i]||'').trim()])));
+}
+function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;a.click()}
+function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+async function chunked(rows,size,fn){let done=0;for(let i=0;i<rows.length;i+=size){await fn(rows.slice(i,i+size));done+=Math.min(size,rows.length-i);const s=$('#imsg');if(s)s.textContent='Uploading… '+done+' / '+rows.length}}
+
+async function admin(tab){
+  if(!ME||ME.role!=='admin')return dash();
+  const tabs=[['students','Students'],['mcq','MCQ'],['cq','CQ'],['tool','Tools'],['allcq','All CQ']];
+  const head=`<h2>Admin panel</h2><div class="tabs" style="margin-top:12px">${tabs.map(t=>`<button data-t="${t[0]}" class="${t[0]===tab?'on':''}">${t[1]}</button>`).join('')}</div>`;
+  loading();
+  await guard(async()=>{
+    let inner='';
+    if(tab==='students')inner=await adminStudents();
+    else if(tab==='mcq')inner=await adminMCQ();
+    else if(tab==='cq')inner=await adminCQ();
+    else if(tab==='tool')inner=await adminTools();
+    else inner=await adminAllCQ();
+    shell(head+inner,{label:'Dashboard',fn:dash});
+    document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>admin(b.dataset.t));
+    ({students:bindStudents,mcq:bindMCQ,cq:bindCQ,tool:bindTools,allcq:bindAllCQ})[tab]();
+  },dash);
+}
+function bulkBox(label,hint,tpl){
+  return `<div class="card"><h3>Bulk upload</h3><p class="muted" style="margin:4px 0 10px">${hint}</p>
+   <input type="file" id="bf" accept=".csv,.txt,text/csv" style="margin-bottom:8px"><textarea id="bt" rows="4" placeholder="…or paste rows here (copy from Excel / Google Sheets, include the header row)"></textarea>
+   <div class="row" style="margin-top:8px"><button class="btn alt sm" id="bd">Download template</button><button class="btn sm" id="bi">Import</button></div><p class="muted" id="imsg" style="margin:8px 0 0"></p></div>`;
+}
+function bindBulk(tpl,importer){
+  $('#bf').onchange=async e=>{const f=e.target.files[0];if(f)$('#bt').value=await f.text()};
+  $('#bd').onclick=()=>download('template.csv',tpl);
+  $('#bi').onclick=()=>{const txt=$('#bt').value.trim();if(!txt)return toast('Choose a file or paste rows first.');$('#bi').disabled=true;
+    importer(csvObjects(txt)).then(m=>{$('#imsg').textContent=m;toast('Import finished')}).catch(e=>{$('#imsg').textContent='Error: '+errMsg(e)}).finally(()=>{$('#bi').disabled=false})};
+}
+function delBtn(table,id,after,extra){return `<button class="btn bad sm" data-del="${table}|${id}|${extra||''}" style="flex:none">Delete</button>`}
+function bindDeletes(after){
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>guard(async()=>{
+    if(!confirm('Delete this item? Students who studied it lose it from their history. An MCQ leaves an empty slot in its stage; the slot is not refilled.'))return;
+    const [t,id,extra]=b.dataset.del.split('|');
+    const {error}=await sb.from(t).delete().eq('id',id);if(error)throw error;
+    if(extra)await sb.storage.from('tool-images').remove([extra]);
+    toast('Deleted');after();
+  }));
+}
+
+/* ---- Students ---- */
+async function adminStudents(){
+  const rows=await rpc('admin_students');ctx.students=rows;
+  const total=rows.reduce((a,r)=>a+r.points,0);
+  return `<div class="stats"><div class="stat"><b>${rows.length}</b><span>Students</span></div><div class="stat"><b>${total}</b><span>Total points</span></div><div class="stat"><b>${rows.filter(r=>r.studied>0).length}</b><span>Started studying</span></div><div class="stat"><b>${rows[0]?esc(rows[0].full_name||'–'):'–'}</b><span>Top student</span></div></div>
+   <div class="row" style="margin-bottom:10px"><input id="fs" placeholder="Search name, email or phone"><button class="btn alt sm" id="ex" style="flex:none">Export CSV</button></div>
+   <div class="scroll"><table><thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Points</th><th>Levels cleared</th><th>Studied</th><th>Exams</th><th>Last active</th><th>Joined</th></tr></thead><tbody id="sb"></tbody></table></div>`;
+}
+function bindStudents(){
+  const draw=()=>{const f=($('#fs').value||'').toLowerCase();
+    const rows=ctx.students.map((r,i)=>({...r,pos:i+1})).filter(r=>!f||[r.full_name,r.email,r.phone].join(' ').toLowerCase().includes(f));
+    $('#sb').innerHTML=rows.length?rows.map(r=>`<tr><td>${r.pos}</td><td>${esc(r.full_name||'–')}</td><td>${esc(r.email)}</td><td>${esc(r.phone||'–')}</td><td><b>${r.points}</b></td><td>${r.levels_cleared}</td><td>${r.studied}</td><td>${r.exams_taken}</td><td>${r.last_active?new Date(r.last_active).toLocaleDateString():'–'}</td><td>${new Date(r.created_at).toLocaleDateString()}</td></tr>`).join(''):'<tr><td colspan="10">No students found.</td></tr>'};
+  $('#fs').oninput=draw;draw();
+  $('#ex').onclick=()=>download('students.csv',['name,email,phone,points,levels_cleared,studied,exams_taken,last_active,joined'].concat(ctx.students.map(r=>[r.full_name,r.email,r.phone,r.points,r.levels_cleared,r.studied,r.exams_taken,r.last_active||'',r.created_at].map(csvCell).join(','))).join('\n'));
+}
+
+/* ---- MCQ ---- */
+async function adminMCQ(){
+  const {data,count}=await sb.from('questions_mcq').select('id,question_text,correct_option,stage_no,stage_pos,levels(level_number)',{count:'exact'}).order('created_at',{ascending:false}).limit(30);
+  ctx.adm=data;
+  return `<div class="card"><h3>Add one MCQ</h3><div class="grid2" style="margin-top:10px"><label class="field"><span>Level</span><select id="mlv">${lvlOptions(1)}</select></label><label class="field"><span>Correct option</span><select id="mc"><option>A</option><option>B</option><option>C</option><option>D</option></select></label></div>
+   <label class="field"><span>Question</span><textarea id="mq" rows="2"></textarea></label>
+   <div class="grid2"><label class="field"><span>Option A</span><input id="ma"></label><label class="field"><span>Option B</span><input id="mb"></label><label class="field"><span>Option C</span><input id="mcc"></label><label class="field"><span>Option D</span><input id="md"></label></div>
+   <label class="field"><span>Explanation (optional)</span><textarea id="me" rows="2"></textarea></label>
+   <label class="field"><span>Stage 1–100 (optional)</span><input id="mst" type="number" min="1" max="100" placeholder="Leave empty to add after the last stage"></label><button class="btn" id="msv">Save MCQ</button></div>
+   <div class="card"><h3>Stage overview</h3><label class="field" style="margin-top:8px"><span>Level</span><select id="slv">${lvlOptions(1)}</select></label><div class="stg" id="sgrid"></div>
+   <p class="muted" style="margin:0;font-size:.88rem">Green = full (10 MCQs), orange = partly filled, dotted = empty. New MCQs go after the last filled slot and never into an older stage. A question can never be moved, so each stage stays the same for every student.</p></div>
+   ${bulkBox('MCQ','Columns: level, question, option_a, option_b, option_c, option_d, correct (A–D), explanation, stage (optional). Questions fill stages in file order, 10 per stage. Duplicate questions in the same level are skipped.')}
+   <div class="sec"><h3>Latest MCQs</h3><span class="muted">${count||0} total</span></div>
+   ${(data||[]).map(x=>`<div class="item"><div class="tx"><b>L${x.levels?x.levels.level_number:'?'} · Stage ${x.stage_no||'–'} #${x.stage_pos||'–'}</b> ${esc(x.question_text)} <span class="pill">${x.correct_option}</span></div>${delBtn('questions_mcq',x.id)}</div>`).join('')}`;
+}
+function bindMCQ(){
+  const draw=()=>rpc('admin_stage_counts',{p_level:+$('#slv').value}).then(c=>{$('#sgrid').innerHTML=Array.from({length:100},(_,i)=>{const n=c[i+1]||0;return `<div class="sg ${n>=10?'passed':n>0?'open':'empty'}"><b>${i+1}</b><small>${n}/10</small></div>`}).join('')}).catch(e=>toast(errMsg(e)));
+  $('#slv').onchange=draw;draw();
+  const imp=async rows=>{
+    const ok=[],bad=[];
+    rows.forEach((r,i)=>{const lv=+(r.level||1),c=(r.correct||r.correct_option||'').toUpperCase(),st=r.stage?+r.stage:null;
+      const o={level:lv,question_text:r.question||r.question_text,option_a:r.option_a||r.a,option_b:r.option_b||r.b,option_c:r.option_c||r.c,option_d:r.option_d||r.d,correct_option:c,explanation:r.explanation||'',stage:st};
+      if(!o.question_text||!o.option_a||!o.option_b||!o.option_c||!o.option_d||!'ABCD'.includes(c)||c.length!==1||!levelId(lv)||(st!==null&&(st<1||st>100)))bad.push(i+2);else ok.push(o)});
+    let ins=0,skip=0,fail=0,last='';
+    for(let i=0;i<ok.length;i+=100){const r=await rpc('admin_import_mcq_staged',{p_rows:ok.slice(i,i+100)});ins+=r.inserted;skip+=r.skipped;fail+=r.failed;if(r.last_error)last=r.last_error;const m=$('#imsg');if(m)m.textContent='Uploading… '+Math.min(i+100,ok.length)+' / '+ok.length}
+    return `Imported ${ins}, skipped ${skip} duplicate(s)${fail?`, ${fail} failed (${last})`:''}${bad.length?`, ${bad.length} invalid row(s) (rows ${bad.slice(0,10).join(', ')}${bad.length>10?'…':''})`:''}. Open the MCQ tab again to see the list.`;
+  };
+  bindBulk('level,question,option_a,option_b,option_c,option_d,correct,explanation,stage\n1,"Which gas shields a MIG weld?",Hydrogen,"Argon + CO2",Nitrogen,Helium,B,"Argon/CO2 mix gives a stable arc.",\n',imp);
+  $('#msv').onclick=()=>guard(async()=>{
+    const st=$('#mst').value?+$('#mst').value:null;
+    const row={level:+$('#mlv').value,question_text:$('#mq').value.trim(),option_a:$('#ma').value.trim(),option_b:$('#mb').value.trim(),option_c:$('#mcc').value.trim(),option_d:$('#md').value.trim(),correct_option:$('#mc').value,explanation:$('#me').value.trim(),stage:st};
+    if(!row.question_text||!row.option_a||!row.option_b||!row.option_c||!row.option_d)return toast('Fill the question and all four options.');
+    const r=await rpc('admin_import_mcq_staged',{p_rows:[row]});
+    if(r.failed)return toast(r.last_error||'Could not save');
+    toast(r.inserted?'MCQ saved':'Skipped: this question already exists');if(r.inserted)admin('mcq');
+  });
+  bindDeletes(()=>admin('mcq'));
+}
+
+/* ---- CQ ---- */
+function parseKw(s){return (s||'').split(';').map(g=>g.split('|').map(w=>w.trim().toLowerCase()).filter(Boolean)).filter(g=>g.length)}
+async function adminCQ(){
+  const {data,count}=await sb.from('questions_cq').select('id,question_text,keywords,levels(level_number)',{count:'exact'}).order('created_at',{ascending:false}).limit(30);
+  return `<div class="card"><h3>Add one CQ</h3>
+   <label class="field" style="margin-top:10px"><span>Level</span><select id="clv">${lvlOptions(1)}</select></label>
+   <label class="field"><span>Question</span><textarea id="cqq" rows="2"></textarea></label>
+   <label class="field"><span>Model answer</span><textarea id="cqa" rows="4"></textarea></label>
+   <label class="field"><span>Key points for automatic marking (optional)</span><input id="ckw" placeholder="cool|cooling ; crack ; hydrogen ; stress"></label>
+   <p class="muted" style="margin:-4px 0 10px;font-size:.88rem">Separate key points with ;  and alternative words with |  . A student gets full marks when enough key points appear (3 by default). Leave empty and marks are given by how many important words of the model answer appear.</p>
+   <label class="field"><span>Key points needed for full marks</span><input id="cnd" type="number" min="1" max="10" value="3"></label><button class="btn" id="csv">Save CQ</button></div>
+   ${bulkBox('CQ','Columns: level, question, answer, keywords (optional, same format as above), need (optional).')}
+   <div class="sec"><h3>Latest CQs</h3><span class="muted">${count||0} total</span></div>
+   ${(data||[]).map(x=>`<div class="item"><div class="tx"><b>L${x.levels?x.levels.level_number:'?'}</b> ${esc(x.question_text)} ${x.keywords&&x.keywords.length?'<span class="pill">auto-marking</span>':''}</div>${delBtn('questions_cq',x.id)}</div>`).join('')}`;
+}
+function bindCQ(){
+  const mk=r=>{const lv=+(r.level||1),kw=parseKw(r.keywords),need=Math.max(1,Math.min(+(r.need||3)||3,kw.length||3));
+    return {level_id:levelId(lv),question_text:(r.question||'').trim(),model_answer:(r.answer||r.model_answer||'').trim(),keywords:kw,need_keywords:need}};
+  const imp=async rows=>{
+    const ok=rows.map(mk).filter(o=>o.level_id&&o.question_text&&o.model_answer);
+    await chunked(ok,200,async ch=>{const {error}=await sb.from('questions_cq').insert(ch);if(error)throw error});
+    return `Imported ${ok.length}, skipped ${rows.length-ok.length} invalid row(s). Do not import the same file twice.`;
+  };
+  bindBulk('level,question,answer,keywords,need\n1,"Why preheat thick steel?","Preheating slows cooling and reduces cracking, hydrogen and residual stress.","cool|cooling;crack;hydrogen;stress",3\n',imp);
+  $('#csv').onclick=()=>guard(async()=>{
+    const o=mk({level:$('#clv').value,question:$('#cqq').value,answer:$('#cqa').value,keywords:$('#ckw').value,need:$('#cnd').value});
+    if(!o.question_text||!o.model_answer)return toast('Fill the question and the model answer.');
+    const {error}=await sb.from('questions_cq').insert(o);if(error)throw error;toast('CQ saved');admin('cq');
+  });
+  bindDeletes(()=>admin('cq'));
+}
+
+/* ---- Tools ---- */
+function resizeImage(file,max){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(file);
+  img.onload=()=>{const s=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    c.toBlob(b=>{URL.revokeObjectURL(u);b?res(b):rej(new Error('Image conversion failed'))},'image/jpeg',.85)};
+  img.onerror=()=>rej(new Error('That file is not an image'));img.src=u})}
+async function adminTools(){
+  const {data,count}=await sb.from('tools').select('id,name,image_path,levels(level_number)',{count:'exact'}).order('created_at',{ascending:false}).limit(40);
+  return `<div class="card"><h3>Add a tool</h3>
+   <label class="field" style="margin-top:10px"><span>Level</span><select id="tlv">${lvlOptions(1)}</select></label>
+   <label class="field"><span>Picture</span><input type="file" id="tf" accept="image/*"></label>
+   <label class="field"><span>Correct name</span><input id="tn" placeholder="e.g. Chipping hammer"></label>
+   <div class="grid2"><label class="field"><span>Wrong option 1</span><input id="tw1"></label><label class="field"><span>Wrong option 2</span><input id="tw2"></label><label class="field"><span>Wrong option 3</span><input id="tw3"></label></div>
+   <button class="btn" id="tsv">Upload tool</button><p class="muted" id="imsg" style="margin:8px 0 0"></p></div>
+   <div class="sec"><h3>Tools</h3><span class="muted">${count||0} total</span></div>
+   ${(data||[]).map(x=>`<div class="item"><img class="thumb" src="${esc(imgUrl(x.image_path))}" alt=""><div class="tx"><b>L${x.levels?x.levels.level_number:'?'}</b> ${esc(x.name)}</div>${delBtn('tools',x.id,null,x.image_path)}</div>`).join('')}`;
+}
+function bindTools(){
+  $('#tsv').onclick=()=>guard(async()=>{
+    const f=$('#tf').files[0],name=$('#tn').value.trim(),w=[$('#tw1').value,$('#tw2').value,$('#tw3').value].map(s=>s.trim());
+    if(!f)return toast('Choose a picture.');if(!name||w.some(s=>!s))return toast('Enter the correct name and all three wrong options.');
+    $('#tsv').disabled=true;$('#imsg').textContent='Uploading…';
+    try{
+      const blob=await resizeImage(f,700),path='tools/'+crypto.randomUUID()+'.jpg';
+      const up=await sb.storage.from('tool-images').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw up.error;
+      const {error}=await sb.from('tools').insert({level_id:levelId(+$('#tlv').value),name,wrong_options:w,image_path:path});
+      if(error){await sb.storage.from('tool-images').remove([path]);throw error}
+      toast('Tool uploaded');admin('tool');
+    }finally{$('#tsv').disabled=false}
+  });
+  bindDeletes(()=>admin('tool'));
+}
+
+/* ---- All CQ (study_materials) ---- */
+async function adminAllCQ(){
+  const {data,count}=await sb.from('study_materials').select('id,question,sort_order,levels(level_number)',{count:'exact'}).order('created_at',{ascending:false}).limit(30);
+  return `<div class="card"><h3>Add one question</h3>
+   <label class="field" style="margin-top:10px"><span>Level</span><select id="alv">${lvlOptions(1)}</select></label>
+   <label class="field"><span>Question</span><textarea id="aq" rows="2"></textarea></label>
+   <label class="field"><span>Answer</span><textarea id="aa" rows="4"></textarea></label><button class="btn" id="asv">Save</button></div>
+   ${bulkBox('All CQ','Columns: level (optional, default 1), question, answer. Questions get serial numbers in the order of the file, after the ones already uploaded. Upload 1000+ rows in one go.')}
+   <div class="sec"><h3>Latest All CQ</h3><span class="muted">${count||0} total</span></div>
+   ${(data||[]).map(x=>`<div class="item"><div class="tx"><b>L${x.levels?x.levels.level_number:'?'} #${x.sort_order}</b> ${esc(x.question)}</div>${delBtn('study_materials',x.id)}</div>`).join('')}`;
+}
+async function nextSort(lid){const {data}=await sb.from('study_materials').select('sort_order').eq('level_id',lid).order('sort_order',{ascending:false}).limit(1);return data&&data[0]?data[0].sort_order+1:1}
+function bindAllCQ(){
+  const imp=async rows=>{
+    const byLevel={};let bad=0;
+    rows.forEach(r=>{const lv=+(r.level||1),lid=levelId(lv),q=(r.question||'').trim(),a=(r.answer||'').trim();if(!lid||!q||!a){bad++;return}(byLevel[lid]=byLevel[lid]||[]).push({level_id:lid,question:q,answer:a})});
+    let n=0;
+    for(const lid of Object.keys(byLevel)){let s=await nextSort(lid);const list=byLevel[lid].map(x=>({...x,sort_order:s++}));
+      await chunked(list,300,async ch=>{const {error}=await sb.from('study_materials').insert(ch);if(error)throw error});n+=list.length}
+    return `Imported ${n}${bad?`, skipped ${bad} invalid row(s)`:''}. Do not import the same file twice.`;
+  };
+  bindBulk('level,question,answer\n1,"What does MIG stand for?","Metal Inert Gas welding."\n',imp);
+  $('#asv').onclick=()=>guard(async()=>{
+    const lid=levelId(+$('#alv').value),q=$('#aq').value.trim(),a=$('#aa').value.trim();
+    if(!q||!a)return toast('Fill the question and the answer.');
+    const {error}=await sb.from('study_materials').insert({level_id:lid,question:q,answer:a,sort_order:await nextSort(lid)});if(error)throw error;toast('Saved');admin('allcq');
+  });
+  bindDeletes(()=>admin('allcq'));
+}
+
+/* ============ START ============ */
+boot();
+</script>
+</body>
+</html>
