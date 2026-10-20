@@ -315,9 +315,12 @@ async function dash(){
     const cur=Math.max(1,...lv.filter(l=>l._open).map(l=>l.level_number));
     ctx.level=cur;
     const pr=await rpc('my_progress',{p_level:cur});
+    let stagePts=0;
+    try{for(const n of [1,2,3,4]){const sm=await rpc('stage_map',{p_level:n});((sm&&sm.stages)||[]).forEach(s=>{if(s.count>0)stagePts+=(s.best||0)})}}catch(e){}
+    const myPts=pr.points+stagePts;
     const studied=pr.studied.mcq+pr.studied.cq+pr.studied.tool;
-    let ri=0;RANKS.forEach((r,i)=>{if(pr.points>=r[0])ri=i});
-    const nx=RANKS[ri+1];const pct=nx?Math.round((pr.points-RANKS[ri][0])*100/(nx[0]-RANKS[ri][0])):100;
+    let ri=0;RANKS.forEach((r,i)=>{if(myPts>=r[0])ri=i});
+    const nx=RANKS[ri+1];const pct=nx?Math.round((myPts-RANKS[ri][0])*100/(nx[0]-RANKS[ri][0])):100;
     const ini=(ME.full_name||ME.email||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const levels=lv.map(l=>{
       const open=l._open,isCur=l.level_number===cur;
@@ -329,9 +332,9 @@ async function dash(){
     shell(`<section class="dhero"><div class="temper"></div>
       <div class="dtop"><div class="avatar">${esc(ini)}</div><div style="flex:1;min-width:0"><h2>Hello, ${esc((ME.full_name||'learner').split(' ')[0])}</h2><span class="rank">${RANKS[ri][1]}</span></div></div>
       <div class="xpbar"><i style="width:${pct}%"></i></div>
-      <div class="xpmeta"><span>${pr.points} points</span><span>${nx?(nx[0]-pr.points)+' to '+nx[1]:'Top rank reached'}</span></div></section>
+      <div class="xpmeta"><span>${myPts} points</span><span>${nx?(nx[0]-myPts)+' to '+nx[1]:'Top rank reached'}</span></div></section>
      <div class="stats">
-      <div class="stat"><b>${pr.points}</b><span>Points</span></div>
+      <div class="stat"><b>${myPts}</b><span>Points</span></div>
       <div class="stat"><b>#${pr.rank}</b><span>Leaderboard rank</span></div>
       <div class="stat"><b>${studied}</b><span>Studied in Level ${cur}</span></div>
       <div class="stat"><b>Level ${cur}</b><span>Current level</span></div></div>
@@ -363,13 +366,13 @@ async function leaderboard(){
   await guard(async()=>{
     const rows=await rpc('leaderboard_top',{p_limit:20});
     const pr=await rpc('my_progress',{p_level:ctx.level||1});
-    const inTop=rows.some(r=>r.is_me);
+    const meRow=rows.find(r=>r.is_me);
     const medal=n=>n===1?'🥇':n===2?'🥈':n===3?'🥉':'#'+n;
-    shell(`<h2>Leaderboard</h2><p class="muted" style="margin:4px 0 14px">Top 20 students by points. Points come only from main exams.</p>
+    shell(`<h2>Leaderboard</h2><p class="muted" style="margin:4px 0 14px">Top 20 by points — everyone is listed. Points: final exams (2 per mark) + MCQ stages (1 per correct answer, best try per stage).</p>
       <div class="card" style="padding:6px 12px"><table class="lb"><tbody>
       ${rows.length?rows.map(r=>`<tr class="${r.is_me?'me':''}"><td class="pos">${medal(Number(r.rnk))}</td><td>${esc(r.full_name)}${r.is_me?' (you)':''}</td><td class="pt">${r.points}</td></tr>`).join(''):'<tr><td>No students yet.</td></tr>'}
       </tbody></table></div>
-      ${!inTop?`<div class="card"><b>Your position: #${pr.rank}</b> · ${pr.points} points</div>`:''}`,{label:'Dashboard',fn:dash});
+      <div class="card"><b>Your position: #${meRow?meRow.rnk:pr.rank}</b> · ${meRow?meRow.points:pr.points} points</div>`,{label:'Dashboard',fn:dash});
   },dash);
 }
 
