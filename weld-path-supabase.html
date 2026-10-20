@@ -190,6 +190,9 @@ input:focus,textarea:focus,select:focus{border-color:var(--vio);outline:none;box
   .suser{display:none}
   .sb{width:auto;white-space:nowrap;padding:9px 12px}
 }
+
+/* ===== v5 level locks ===== */
+.lvl.locked{opacity:.78;background:#F5F6F8}
 </style>
 </head>
 <body>
@@ -307,7 +310,8 @@ async function dash(){
   VIEW='dash';loading();
   await guard(async()=>{
     const lv=await rpc('get_dashboard');
-    const cur=Math.max(1,...lv.filter(l=>l.is_unlocked).map(l=>l.level_number));
+    lv.forEach(l=>{const p=lv.find(x=>x.level_number===l.level_number-1);l._open=!!(l.is_unlocked&&(l.level_number===1||(p&&p.mcq_passed&&p.cq_passed)))});
+    const cur=Math.max(1,...lv.filter(l=>l._open).map(l=>l.level_number));
     ctx.level=cur;
     const pr=await rpc('my_progress',{p_level:cur});
     const studied=pr.studied.mcq+pr.studied.cq+pr.studied.tool;
@@ -315,11 +319,11 @@ async function dash(){
     const nx=RANKS[ri+1];const pct=nx?Math.round((pr.points-RANKS[ri][0])*100/(nx[0]-RANKS[ri][0])):100;
     const ini=(ME.full_name||ME.email||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const levels=lv.map(l=>{
-      const open=l.is_unlocked,isCur=l.level_number===cur;
+      const open=l._open,isCur=l.level_number===cur;
       const done=l.mcq_passed&&l.cq_passed;
       return `<button class="lvl ${open?'':'locked'}" data-n="${l.level_number}"><span class="node">${open?l.level_number:'🔒'}</span>
         <div class="t">${LEVEL_ICON[l.level_number-1]||''} Level ${l.level_number} · ${esc(l.title.replace(/^Level \d+:\s*/,''))}</div>
-        <div class="muted" style="font-size:.92rem">${open?(done?'Cleared. Open to review.':(isCur?'Current level. Pass MCQ and CQ exams with 80+ to unlock the next.':'Open')):'Locked. Clear the previous level first.'}</div>
+        <div class="muted" style="font-size:.92rem">${open?(done?'Cleared. Open to review.':(isCur?'Current level. Finish all the stages, then pass the final exam (80+) to open the next level.':'Open')):'🔒 Locked — আগের লেভেল শেষ করলে খুলবে।'}</div>
         ${open?`<div class="chips"><span class="chip ${l.mcq_passed?'ok':''}">MCQ best ${l.mcq_best_score==null?'–':Math.round(l.mcq_best_score)+'%'}</span><span class="chip ${l.cq_passed?'ok':''}">CQ best ${l.cq_best_score==null?'–':Math.round(l.cq_best_score)+'%'}</span></div>`:''}</button>`}).join('');
     shell(`<section class="dhero"><div class="temper"></div>
       <div class="dtop"><div class="avatar">${esc(ini)}</div><div style="flex:1;min-width:0"><h2>Hello, ${esc((ME.full_name||'learner').split(' ')[0])}</h2><span class="rank">${RANKS[ri][1]}</span></div></div>
@@ -348,7 +352,7 @@ async function dash(){
       }finally{jgo.disabled=false}
     });
     if($('#pe'))$('#pe').onclick=()=>startExam('mcq',true);
-    document.querySelectorAll('.lvl').forEach(b=>b.onclick=()=>{const n=+b.dataset.n,l=lv.find(x=>x.level_number===n);if(!l.is_unlocked)return toast('Locked. Clear Level '+(n-1)+' first.');hub(n)});
+    document.querySelectorAll('.lvl').forEach(b=>b.onclick=()=>{const n=+b.dataset.n,l=lv.find(x=>x.level_number===n);if(!l._open)return toast('🔒 Locked — আগের লেভেল শেষ করলে খুলবে');hub(n)});
   },authScreen);
 }
 
@@ -382,7 +386,7 @@ async function hub(n){
       ${t('hc','✍️','CQ',`${pr.studied.cq} / ${pr.available.cq} studied`)}
       ${t('ht','🔧','Tools',`${pr.studied.tool} / ${pr.available.tool} studied`)}
       ${t('ha','📖','All CQ','Browse every question and answer')}
-      ${t('he','⏱️','Exam','Main exam · earns points')}
+      ${t('he','⏱️','Final exam','All stages · earns points')}
       ${t('hh','📚','History','Read what you studied again')}
      </div>`,{label:'All levels',fn:dash});
     $('#hm').onclick=mcqStages;$('#hc').onclick=()=>study('cq');$('#ht').onclick=()=>study('tool');
@@ -637,12 +641,18 @@ async function examMenu(){
   await guard(async()=>{
     const pr=await rpc('my_progress',{p_level:ctx.level});
     const c=k=>pr.studied[k];
-    shell(`<h2>Main exam</h2><p class="muted" style="margin:4px 0 14px">Up to 50 questions, 30 minutes, taken only from what you studied. Questions and answer positions are re-shuffled every time. Points: 2 per mark.</p>
+    let gateMsg='';
+    try{const sm=await rpc('stage_map',{p_level:ctx.level});const st=(sm&&sm.stages)||[];
+      const avail=st.filter(x=>x.count>0),passed=st.filter(x=>x.status==='passed').length;
+      if(avail.length&&passed<avail.length)gateMsg='আগে এই লেভেলের সব স্টেজ শেষ করো — এখন পর্যন্ত '+passed+'/'+avail.length+' স্টেজ হয়েছে। সব স্টেজ শেষ হলে ফাইনাল পরীক্ষা খুলবে।';
+    }catch(e){}
+    shell(`<h2>Final exam</h2><p class="muted" style="margin:4px 0 14px">Questions come from all the stages of this level. Pass with 80+ to open the next level.</p>
      ${pr.practice_due?`<div class="banner"><h3>Practice exam ready</h3><p>Based on the last 50 MCQs you studied. No points.</p><button class="btn" id="pe">Start practice exam</button></div>`:`<p class="muted" style="margin-bottom:12px">Practice exam (no points) unlocks after every 50 MCQs. ${pr.mcq_until_practice} more MCQs to go.</p>`}
-     <div class="grid2">
+     ${gateMsg?`<div class="banner"><h3>🔒 Final exam locked</h3><p>${gateMsg}</p><button class="btn" id="gst">Go to MCQ stages</button></div>`:`<div class="grid2">
       <button class="tile" data-k="mcq"><span class="t">MCQ exam</span><span class="s">${c('mcq')} studied</span></button>
       <button class="tile" data-k="cq"><span class="t">CQ exam</span><span class="s">${c('cq')} studied</span></button>
-      <button class="tile" data-k="tool"><span class="t">Tools exam</span><span class="s">${c('tool')} studied</span></button></div>`,{label:'Level '+ctx.level,fn:()=>hub(ctx.level)});
+      <button class="tile" data-k="tool"><span class="t">Tools exam</span><span class="s">${c('tool')} studied</span></button></div>`}`,{label:'Level '+ctx.level,fn:()=>hub(ctx.level)});
+    if($('#gst'))$('#gst').onclick=()=>mcqStages();
     document.querySelectorAll('.tile[data-k]').forEach(b=>b.onclick=()=>startExam(b.dataset.k,false));
     if($('#pe'))$('#pe').onclick=()=>startExam('mcq',true);
   },()=>hub(ctx.level));
