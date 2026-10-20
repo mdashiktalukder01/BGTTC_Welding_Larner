@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Weld Path – Welding Learner</title>
+<title>BGTTC Welding – Welding Learner</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23F2B33D'/%3E%3Cstop offset='1' stop-color='%23E4570F'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='48' height='48' rx='11' fill='url(%23g)'/%3E%3Cpath d='M13 35 L29 19' stroke='white' stroke-width='4.5' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='36' r='3' fill='white'/%3E%3Cpath d='M34.5 6l1.7 4.6 4.6 1.7-4.6 1.7-1.7 4.6-1.7-4.6-4.6-1.7 4.6-1.7z' fill='%23FFF3D6'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Hind+Siliguri:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
@@ -236,7 +237,7 @@ function shell(inner,back){
     <button class="sb" data-sb="out"><span class="sic">\u{1F6AA}</span>Log out</button>
   </aside>`:'';
   const mainHtml=`<main class="wrap">${back?`<button class="back" id="bk">\u2190 ${esc(back.label)}</button>`:''}${inner}</main>`;
-  app.innerHTML=`<div class="bar"><div class="brand"><span class="spark"></span>Weld Path</div></div>${ME?`<div class="layout">${side}${mainHtml}</div>`:mainHtml}`;
+  app.innerHTML=`<div class="bar"><div class="brand"><svg width="32" height="32" viewBox="0 0 48 48" aria-hidden="true" style="flex:none"><defs><linearGradient id="blg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2B33D"/><stop offset="1" stop-color="#E4570F"/></linearGradient></defs><rect x="1" y="1" width="46" height="46" rx="11" fill="url(#blg)"/><path d="M13 35 L29 19" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/><circle cx="12" cy="36" r="3" fill="#fff"/><path d="M34.5 6l1.7 4.6 4.6 1.7-4.6 1.7-1.7 4.6-1.7-4.6-4.6-1.7 4.6-1.7z" fill="#FFF3D6"/><circle cx="40" cy="25" r="1.8" fill="#FFE9B8"/><circle cx="27" cy="8.5" r="1.5" fill="#FFE9B8"/></svg>BGTTC Welding</div></div>${ME?`<div class="layout">${side}${mainHtml}</div>`:mainHtml}`;
   if(back)$('#bk').onclick=back.fn;
   if(ME){
     document.querySelectorAll('[data-sb]').forEach(b=>b.onclick=()=>{
@@ -788,8 +789,7 @@ function bindStudents(){
 
 /* ---- MCQ ---- */
 async function adminMCQ(){
-  const {data,count}=await sb.from('questions_mcq').select('id,question_text,correct_option,stage_no,stage_pos,levels(level_number)',{count:'exact'}).order('created_at',{ascending:false}).limit(30);
-  ctx.adm=data;
+  const {count}=await sb.from('questions_mcq').select('id',{count:'exact',head:true});
   return `<div class="card"><h3>Add one MCQ</h3><div class="grid2" style="margin-top:10px"><label class="field"><span>Level</span><select id="mlv">${lvlOptions(1)}</select></label><label class="field"><span>Correct option</span><select id="mc"><option>A</option><option>B</option><option>C</option><option>D</option></select></label></div>
    <label class="field"><span>Question</span><textarea id="mq" rows="2"></textarea></label>
    <div class="grid2"><label class="field"><span>Option A</span><input id="ma"></label><label class="field"><span>Option B</span><input id="mb"></label><label class="field"><span>Option C</span><input id="mcc"></label><label class="field"><span>Option D</span><input id="md"></label></div>
@@ -798,8 +798,16 @@ async function adminMCQ(){
    <div class="card"><h3>Stage overview</h3><label class="field" style="margin-top:8px"><span>Level</span><select id="slv">${lvlOptions(1)}</select></label><div class="stg" id="sgrid"></div>
    <p class="muted" style="margin:0;font-size:.88rem">Green = full (10 MCQs), orange = partly filled, dotted = empty. New MCQs go after the last filled slot and never into an older stage. A question can never be moved, so each stage stays the same for every student.</p></div>
    ${bulkBox('MCQ','Columns: level, question, option_a, option_b, option_c, option_d, correct (A–D), explanation, stage (optional). Questions fill stages in file order, 10 per stage. Duplicate questions in the same level are skipped.')}
-   <div class="sec"><h3>Latest MCQs</h3><span class="muted">${count||0} total</span></div>
-   ${(data||[]).map(x=>`<div class="item"><div class="tx"><b>L${x.levels?x.levels.level_number:'?'} · Stage ${x.stage_no||'–'} #${x.stage_pos||'–'}</b> ${esc(x.question_text)} <span class="pill">${x.correct_option}</span></div>${delBtn('questions_mcq',x.id)}</div>`).join('')}`;
+   <div class="sec"><h3>Browse &amp; edit MCQs</h3><span class="muted">${count||0} total</span></div>
+   <div class="card"><div class="grid2"><label class="field"><span>Level</span><select id="flv"><option value="">All levels</option>${lvlOptions(0)}</select></label><label class="field"><span>Stage</span><select id="fst"><option value="">All stages</option></select></label></div>
+   <label class="field"><span>Search question</span><input id="fq" placeholder="Type part of a question…"></label>
+   <p class="muted" id="fcount" style="margin:0 0 6px"></p><div id="qlist"></div></div>
+   <div class="card" id="ecard" style="display:none"><h3>Edit MCQ</h3><p class="muted" id="epos" style="margin:4px 0 10px"></p>
+   <label class="field"><span>Question</span><textarea id="eq" rows="2"></textarea></label>
+   <div class="grid2"><label class="field"><span>Option A</span><input id="eqa"></label><label class="field"><span>Option B</span><input id="eqb"></label><label class="field"><span>Option C</span><input id="eqc"></label><label class="field"><span>Option D</span><input id="eqd"></label></div>
+   <div class="grid2"><label class="field"><span>Correct option</span><select id="ecor"><option>A</option><option>B</option><option>C</option><option>D</option></select></label><label class="field"><span>Explanation (optional)</span><input id="eex"></label></div>
+   <div class="row" style="margin-top:8px"><button class="btn sm" id="esv">Save changes</button><button class="btn alt sm" id="ecn" style="flex:none">Cancel</button></div>
+   <p class="muted" style="margin:8px 0 0">Only the wording, options, correct answer and explanation can change — a question's level, stage and position never change, so every student's stage stays the same.</p></div>`;
 }
 function bindMCQ(){
   const draw=()=>rpc('admin_stage_counts',{p_level:+$('#slv').value}).then(c=>{$('#sgrid').innerHTML=Array.from({length:100},(_,i)=>{const n=c[i+1]||0;return `<div class="sg ${n>=10?'passed':n>0?'open':'empty'}"><b>${i+1}</b><small>${n}/10</small></div>`}).join('')}).catch(e=>toast(errMsg(e)));
@@ -822,7 +830,43 @@ function bindMCQ(){
     if(r.failed)return toast(r.last_error||'Could not save');
     toast(r.inserted?'MCQ saved':'Skipped: this question already exists');if(r.inserted)admin('mcq');
   });
-  bindDeletes(()=>admin('mcq'));
+  // Browse, filter & edit MCQs
+  let editId=null,debT=null;
+  $('#fst').innerHTML='<option value="">All stages</option>'+Array.from({length:100},(_,i)=>`<option value="${i+1}">Stage ${i+1}</option>`).join('');
+  const openEdit=id=>{
+    const x=(ctx.qrows||[]).find(r=>String(r.id)===String(id));if(!x)return;
+    editId=x.id;
+    $('#epos').textContent=`L${x.levels?x.levels.level_number:'?'} · Stage ${x.stage_no||'–'} #${x.stage_pos||'–'} — this position never changes`;
+    $('#eq').value=x.question_text||'';$('#eqa').value=x.option_a||'';$('#eqb').value=x.option_b||'';$('#eqc').value=x.option_c||'';$('#eqd').value=x.option_d||'';
+    $('#ecor').value=x.correct_option||'A';$('#eex').value=x.explanation||'';
+    $('#ecard').style.display='';$('#ecard').scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  const drawQ=async()=>{
+    try{
+      let q=sb.from('questions_mcq').select('id,question_text,option_a,option_b,option_c,option_d,correct_option,explanation,stage_no,stage_pos,levels(level_number)',{count:'exact'}).order('stage_no',{ascending:true}).order('stage_pos',{ascending:true}).limit(300);
+      const lv=$('#flv').value,st=$('#fst').value,txt=$('#fq').value.trim();
+      if(lv)q=q.eq('level_id',levelId(+lv));
+      if(st)q=q.eq('stage_no',+st);
+      if(txt)q=q.ilike('question_text','%'+txt.replace(/[%_]/g,'')+'%');
+      const {data:rows,count:fc,error}=await q;if(error)throw error;
+      ctx.qrows=rows||[];
+      $('#fcount').textContent=`Showing ${ctx.qrows.length} of ${fc==null?ctx.qrows.length:fc} matching MCQs${ctx.qrows.length>=300?' (first 300 — narrow the filter to see the rest)':''}.`;
+      $('#qlist').innerHTML=ctx.qrows.length?ctx.qrows.map(x=>`<div class="item"><div class="tx"><b>L${x.levels?x.levels.level_number:'?'} · Stage ${x.stage_no||'–'} #${x.stage_pos||'–'}</b> ${esc(x.question_text)} <span class="pill">${x.correct_option}</span></div><button class="btn alt sm" data-edit="${x.id}" style="flex:none">Edit</button>${delBtn('questions_mcq',x.id)}</div>`).join(''):'<p class="muted" style="margin:0">No MCQs match this filter yet.</p>';
+      document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(b.dataset.edit));
+      bindDeletes(()=>drawQ());
+    }catch(e){toast(errMsg(e))}
+  };
+  $('#flv').onchange=drawQ;$('#fst').onchange=drawQ;
+  $('#fq').oninput=()=>{clearTimeout(debT);debT=setTimeout(drawQ,300)};
+  $('#ecn').onclick=()=>{$('#ecard').style.display='none';editId=null};
+  $('#esv').onclick=()=>guard(async()=>{
+    if(!editId)return;
+    const body={question_text:$('#eq').value.trim(),option_a:$('#eqa').value.trim(),option_b:$('#eqb').value.trim(),option_c:$('#eqc').value.trim(),option_d:$('#eqd').value.trim(),correct_option:$('#ecor').value,explanation:$('#eex').value.trim()};
+    if(!body.question_text||!body.option_a||!body.option_b||!body.option_c||!body.option_d)return toast('Fill the question and all four options.');
+    const {error}=await sb.from('questions_mcq').update(body).eq('id',editId);if(error)throw error;
+    toast('MCQ updated');$('#ecard').style.display='none';editId=null;drawQ();
+  });
+  drawQ();
 }
 
 /* ---- CQ ---- */
