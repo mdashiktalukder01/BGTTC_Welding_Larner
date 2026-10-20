@@ -221,6 +221,7 @@ function errMsg(e){const m=(e&&e.message)?e.message:String(e);
   return m}
 async function rpc(name,args){const {data,error}=await sb.rpc(name,args||{});if(error)throw error;return data}
 function imgUrl(p){return sb.storage.from('tool-images').getPublicUrl(p).data.publicUrl}
+function shuf(a){a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t}return a}
 function levelId(n){const l=LEVELS.find(x=>x.level_number===n);return l?l.id:null}
 function lvlOptions(sel){return LEVELS.map(l=>`<option value="${l.level_number}" ${l.level_number===sel?'selected':''}>Level ${l.level_number} · ${esc(l.title)}</option>`).join('')}
 function shell(inner,back){
@@ -417,7 +418,7 @@ async function study(kind){
       $('#rv').onclick=()=>guard(async()=>{const r=await rpc('study_answer',{p_kind:'cq',p_id:it.id});$('#ans').innerHTML=`<div class="note">${esc(r.answer)}</div>`;$('#rv').remove();$('#nx').disabled=false});
     }else{
       const L='ABCD';
-      const opts=it.options.map((t,k)=>`<button class="opt" data-k="${kind==='mcq'?L[k]:esc(t)}">${kind==='mcq'?L[k]+'. ':''}${esc(t)}</button>`).join('');
+      const opts=shuf(it.options.map((t,k)=>({t,k}))).map((o,j)=>`<button class="opt" data-k="${kind==='mcq'?L[o.k]:esc(o.t)}">${kind==='mcq'?L[j]+'. ':''}${esc(o.t)}</button>`).join('');
       shell(`${head}<div class="card">${kind==='tool'?`<div class="toolimg"><img src="${esc(imgUrl(it.image_path))}" alt="Tool to identify"></div><div class="qtext">What is the correct name of this tool?</div>`:`<div class="qtext">${esc(it.question)}</div>`}${opts}<div id="ex"></div><button class="btn" id="nx" disabled>Next</button></div>`,back);
       document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>guard(async()=>{
         document.querySelectorAll('.opt').forEach(x=>x.disabled=true);
@@ -443,7 +444,7 @@ async function mcqStages(){
     const st=d.stages;ctx.stageMap=st;
     const passed=st.filter(x=>x.status==='passed').length,avail=st.filter(x=>x.count>0).length;
     const sub=x=>x.status==='passed'?'✓ '+x.best+'/'+x.count:x.status==='locked'?'🔒':x.status==='empty'?'soon':'open';
-    shell(`<h2>MCQ stages</h2><p class="muted" style="margin:4px 0 12px">Every stage has 10 MCQs that never change. Score 8 of 10 or more to open the next stage. You can read cleared stages again any time.</p>
+    shell(`<h2>MCQ stages</h2><p class="muted" style="margin:4px 0 12px">Every stage has 10 MCQs. The questions and the A B C D options shuffle every time you play, so answer positions cannot be memorised. Score 8 of 10 or more to open the next stage. You can read cleared stages again any time.</p>
       <div class="stats"><div class="stat"><b>${passed}/${avail}</b><span>Stages cleared</span></div><div class="stat"><b>${d.open_stage<=100?d.open_stage:'–'}</b><span>Next stage to play</span></div></div>
       <div class="stg">${st.map(x=>`<button class="sg ${x.status}" data-s="${x.stage}" aria-label="Stage ${x.stage} ${x.status}"><b>${x.stage}</b><small>${sub(x)}</small></button>`).join('')}</div>`,{label:'Level '+ctx.level,fn:()=>hub(ctx.level)});
     document.querySelectorAll('.sg[data-s]').forEach(b=>b.onclick=()=>{
@@ -466,14 +467,15 @@ async function runStage(stage){
   loading('Opening stage…');
   await guard(async()=>{
     const d=await rpc('stage_start',{p_level:ctx.level,p_stage:stage});
-    ctx.stg={id:d.attempt_id,stage:d.stage,qs:d.questions,need:d.need,i:0,correct:0};
+    const qs=shuf(d.questions).map(q=>({id:q.id,question:q.question,opts:shuf(q.options.map((t,k)=>({t,k})))}));
+    ctx.stg={id:d.attempt_id,stage:d.stage,qs,need:d.need,i:0,correct:0};
     stageQ();
   },mcqStages);
 }
 function stageQ(){
   const S=ctx.stg,q=S.qs[S.i],L='ABCD',last=S.i+1===S.qs.length;
   shell(`<div class="qhead"><span>Stage ${S.stage} · Question ${S.i+1} of ${S.qs.length}</span><span class="pill">${S.correct} correct</span></div>
-    <div class="card"><div class="qtext">${esc(q.question)}</div>${q.options.map((t,k)=>`<button class="opt" data-k="${L[k]}">${L[k]}. ${esc(t)}</button>`).join('')}<div id="ex"></div><button class="btn" id="nx" disabled>${last?'Finish stage':'Next'}</button></div>`,{label:'Leave stage',fn:mcqStages});
+    <div class="card"><div class="qtext">${esc(q.question)}</div>${q.opts.map((o,j)=>`<button class="opt" data-k="${L[o.k]}">${L[j]}. ${esc(o.t)}</button>`).join('')}<div id="ex"></div><button class="btn" id="nx" disabled>${last?'Finish stage':'Next'}</button></div>`,{label:'Leave stage',fn:mcqStages});
   document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>guard(async()=>{
     document.querySelectorAll('.opt').forEach(x=>x.disabled=true);
     const r=await rpc('stage_answer',{p_attempt:S.id,p_qid:q.id,p_choice:b.dataset.k});
@@ -490,7 +492,7 @@ async function finishStage(){
     const r=await rpc('stage_finish',{p_attempt:S.id});
     shell(`<div class="card" style="text-align:center"><div class="muted">Stage ${r.stage}</div>
       <div class="big" style="color:${r.passed?'var(--good)':'var(--bad)'}">${r.correct}/${r.total}</div>
-      <div class="note" style="text-align:left">${r.passed?(r.next_stage?`Stage cleared. Stage ${r.next_stage} is now open.`:'Stage cleared.'):`You need ${r.need} correct to clear this stage. Read it again and retry. The same ${r.total} questions will come.`}</div>
+      <div class="note" style="text-align:left">${r.passed?(r.next_stage?`Stage cleared. Stage ${r.next_stage} is now open.`:'Stage cleared.'):`You need ${r.need} correct to clear this stage. Read it again and retry. The same questions will come back in a different order.`}</div>
       <div class="row" style="margin-bottom:10px">${r.passed&&r.next_stage?`<button class="btn" id="n">Play Stage ${r.next_stage}</button>`:`<button class="btn" id="n">Try again</button>`}<button class="btn alt" id="rv">Read stage</button></div>
       <button class="btn alt" id="m">All stages</button></div>`);
     $('#n').onclick=()=>runStage(r.passed&&r.next_stage?r.next_stage:r.stage);
