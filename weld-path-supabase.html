@@ -172,6 +172,24 @@ input:focus,textarea:focus,select:focus{border-color:var(--vio);outline:none;box
 .fq{font-size:1.25rem;font-weight:600;white-space:pre-wrap}
 .fa{font-size:1.15rem;font-weight:600;color:var(--good);white-space:pre-wrap}
 .bigcode{font-family:'Barlow Condensed';font-size:2.6rem;font-weight:700;letter-spacing:.12em;text-align:center;padding:10px;border:2px dashed var(--vio);border-radius:12px;color:var(--vio)}
+
+/* ===== v3 left sidebar (Ashik's marked screenshot, 2026-10-20) ===== */
+.layout{display:flex;align-items:flex-start;max-width:1240px;margin:0 auto}
+.layout .wrap{flex:1;min-width:0}
+.side{position:sticky;top:76px;width:236px;flex:none;padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+.suser{display:flex;gap:10px;align-items:center;padding:6px 8px 14px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.sname{font-weight:700;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.smut{font-size:.8rem;color:var(--muted)}
+.sb{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:11px;background:transparent;font-weight:600;text-align:left;font-size:1rem;color:inherit}
+.sb .sic{font-size:1.15rem;width:24px;text-align:center;flex:none}
+.sb:hover{background:rgba(108,76,241,.10)}
+.sb.on{background:linear-gradient(135deg,var(--vio),var(--vio2));color:#fff;box-shadow:0 4px 12px rgba(108,76,241,.30)}
+@media(max-width:860px){
+  .layout{flex-direction:column}
+  .side{position:static;width:100%;flex-direction:row;overflow-x:auto;padding:10px 12px;gap:6px;border-bottom:1px solid var(--line)}
+  .suser{display:none}
+  .sb{width:auto;white-space:nowrap;padding:9px 12px}
+}
 </style>
 </head>
 <body>
@@ -188,6 +206,7 @@ const $=s=>document.querySelector(s);
 const app=$('#app');
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let ME=null, LEVELS=[], ctx={level:1}, timerId=null;
+let VIEW='dash';
 const LEVEL_ICON=['🧯','🔥','🛠️','🏅'];
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3200)}
 function errMsg(e){const m=(e&&e.message)?e.message:String(e);
@@ -204,11 +223,35 @@ function lvlOptions(sel){return LEVELS.map(l=>`<option value="${l.level_number}"
 function shell(inner,back){
   clearInterval(timerId);
   const nav=ME?`<div class="nav"><button class="ghost" id="nlb">🏆 Leaderboard</button>${ME.role==='admin'?'<button class="ghost" id="nad">⚙️ Admin</button>':''}<button class="ghost" id="nlo">Log out</button></div>`:'';
-  app.innerHTML=`<div class="bar"><div class="brand" id="nbr"><span class="spark"></span>Weld Path</div>${nav}</div><main class="wrap">${back?`<button class="back" id="bk">← ${esc(back.label)}</button>`:''}${inner}</main>`;
+  const sitem=(v,ic,label)=>`<button class="sb ${VIEW===v?'on':''}" data-sb="${v}"><span class="sic">${ic}</span>${label}</button>`;
+  const side=ME?`<aside class="side">
+    <div class="suser"><div class="avatar" style="width:42px;height:42px;font-size:1.05rem;flex:none">${esc((ME.full_name||ME.email||'?').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div><div style="min-width:0"><div class="sname">${esc(ME.full_name||'')}</div><div class="smut">${ME.role==='admin'?'Admin · Teacher':'Student'}</div></div></div>
+    ${sitem('dash','\u{1F3E0}','Dashboard')}
+    ${sitem('hub','\u{1F3AF}','Level '+(ctx.level||1))}
+    ${sitem('mcq','\u{1F4DD}','MCQ stages')}
+    ${sitem('fc','\u{1F0CF}','Flashcards')}
+    ${sitem('exam','\u23F1\uFE0F','Exam')}
+    ${sitem('lb','\u{1F3C6}','Leaderboard')}
+    ${ME.role==='admin'?sitem('admin','\u2699\uFE0F','Admin panel'):''}
+    <button class="sb" data-sb="out"><span class="sic">\u{1F6AA}</span>Log out</button>
+  </aside>`:'';
+  const mainHtml=`<main class="wrap">${back?`<button class="back" id="bk">\u2190 ${esc(back.label)}</button>`:''}${inner}</main>`;
+  app.innerHTML=`<div class="bar"><div class="brand" id="nbr"><span class="spark"></span>Weld Path</div>${nav}</div>${ME?`<div class="layout">${side}${mainHtml}</div>`:mainHtml}`;
   if(back)$('#bk').onclick=back.fn;
   if(ME){
     $('#nbr').onclick=dash;$('#nlb').onclick=leaderboard;$('#nlo').onclick=async()=>{await sb.auth.signOut();ME=null;authScreen()};
     if($('#nad'))$('#nad').onclick=()=>admin('students');
+    document.querySelectorAll('[data-sb]').forEach(b=>b.onclick=()=>{
+      const v=b.dataset.sb;
+      if(v==='dash')dash();
+      else if(v==='hub')hub(ctx.level||1);
+      else if(v==='mcq'){VIEW='mcq';mcqStages()}
+      else if(v==='fc')flashcards('mcq');
+      else if(v==='exam'){VIEW='exam';examMenu()}
+      else if(v==='lb')leaderboard();
+      else if(v==='admin')admin('students');
+      else if(v==='out')(async()=>{await sb.auth.signOut();ME=null;authScreen()})();
+    });
   }
   window.scrollTo(0,0);
 }
@@ -270,7 +313,7 @@ async function boot(){
 /* ============ DASHBOARD ============ */
 const RANKS=[[0,'Apprentice'],[50,'Welder'],[200,'Fabricator'],[500,'Master welder']];
 async function dash(){
-  loading();
+  VIEW='dash';loading();
   await guard(async()=>{
     const lv=await rpc('get_dashboard');
     const cur=Math.max(1,...lv.filter(l=>l.is_unlocked).map(l=>l.level_number));
@@ -322,7 +365,7 @@ async function dash(){
 
 /* ============ LEADERBOARD ============ */
 async function leaderboard(){
-  loading();
+  VIEW='lb';loading();
   await guard(async()=>{
     const rows=await rpc('leaderboard_top',{p_limit:20});
     const pr=await rpc('my_progress',{p_level:ctx.level||1});
@@ -338,7 +381,7 @@ async function leaderboard(){
 
 /* ============ LEVEL HUB ============ */
 async function hub(n){
-  ctx.level=n;loading();
+  VIEW='hub';ctx.level=n;loading();
   await guard(async()=>{
     const pr=await rpc('my_progress',{p_level:n});
     const t=(id,ic,tt,ss)=>`<button class="tile" id="${id}"><span class="ic">${ic}</span><span><div class="t">${tt}</div><div class="s">${ss}</div></span></button>`;
@@ -524,7 +567,7 @@ async function reread(kind,idx,total){
 
 /* ============ FLASHCARDS (v2) ============ */
 async function flashcards(kind){
-  loading();
+  VIEW='fc';loading();
   await guard(async()=>{
     let items=[];
     if(kind==='cq'){
@@ -683,6 +726,7 @@ async function chunked(rows,size,fn){let done=0;for(let i=0;i<rows.length;i+=siz
 
 async function admin(tab){
   if(!ME||ME.role!=='admin')return dash();
+  VIEW='admin';
   const tabs=[['students','Students'],['report','Report'],['mcq','MCQ'],['cq','CQ'],['tool','Tools'],['allcq','All CQ'],['join','Join codes'],['ai','AI MCQ']];
   const head=`<h2>Admin panel</h2><div class="tabs" style="margin-top:12px">${tabs.map(t=>`<button data-t="${t[0]}" class="${t[0]===tab?'on':''}">${t[1]}</button>`).join('')}</div>`;
   loading();
